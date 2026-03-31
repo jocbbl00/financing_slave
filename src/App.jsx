@@ -178,17 +178,17 @@ export default function App() {
       ]
     });
 
-    // News with clickable links
+    // News with clickable links and summaries
     sections.push({ 
       title: "News to Keep an Eye On", 
       icon: "📰",
       color: '#3b82f6', 
       links: [
-        { text: 'Fed Interest Rate Decision & FOMC Minutes', url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm' },
-        { text: 'TSMC Monthly Revenue Report (impacts NTD Stock)', url: 'https://www.tsmc.com/english/investorRelations/monthly_revenue' },
-        { text: 'US-China Tariff & Trade Policy Updates', url: 'https://www.reuters.com/business/us-china-trade/' },
-        { text: 'Bank of Japan Rate Policy (JPY exposure)', url: 'https://www.boj.or.jp/en/mopo/mpmdeci/index.htm' },
-        { text: 'Bloomberg Markets Daily Briefing', url: 'https://www.bloomberg.com/markets' }
+        { text: 'Fed Interest Rate Decision & FOMC Minutes', url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm', summary: 'The Fed\'s rate stance directly controls your USD cash yield. With rates at 3.5-3.75%, any dovish pivot would reduce returns on your USD Cash & Preferred holdings while boosting equity valuations.' },
+        { text: 'TSMC Monthly Revenue Report', url: 'https://www.tsmc.com/english/investorRelations/monthly_revenue', summary: 'TSMC is the backbone of Taiwan\'s tech sector. Their monthly revenue data is a leading indicator for your NTD Stock positions and reflects AI chip demand health globally.' },
+        { text: 'US-China Tariff & Trade Policy Updates', url: 'https://www.reuters.com/business/us-china-trade/', summary: 'Escalating tariffs disrupt semiconductor supply chains and impact cross-strait capital flows. Critical for anyone holding both USD and NTD-denominated assets simultaneously.' },
+        { text: 'Bank of Japan Rate Policy (JPY)', url: 'https://www.boj.or.jp/en/mopo/mpmdeci/index.htm', summary: 'BOJ policy shifts cause massive JPY volatility. If you hold or plan to hold JPY-denominated assets, rate normalization could strengthen JPY 10-15% against USD.' },
+        { text: 'Bloomberg Markets Daily Briefing', url: 'https://www.bloomberg.com/markets', summary: 'Comprehensive daily snapshot of global equity, bond, and commodity markets. Essential for cross-checking whether your portfolio\'s risk exposure matches the day\'s macro sentiment.' }
       ]
     });
 
@@ -239,9 +239,12 @@ export default function App() {
   return (
     <div className="app-container">
       <header>
-        <div>
-          <h1>Yarin's Accounting Slave</h1>
-          <p>Real-time Portfolio Tracking & Analytics</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <img src="/favicon.jpg" alt="icon" style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} />
+          <div>
+            <h1>Yarin's Accounting Slave</h1>
+            <p>Real-time Portfolio Tracking & Analytics</p>
+          </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ display: 'flex', background: 'rgba(255,255,255,0.3)', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.5)' }}>
@@ -355,7 +358,7 @@ export default function App() {
                  {section.links && (
                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                      {section.links.map((link, i) => (
-                       <li key={i} style={{ marginBottom: '0.5rem' }}>
+                       <li key={i} style={{ marginBottom: '1rem' }}>
                          <a 
                            href={link.url} 
                            target="_blank" 
@@ -364,6 +367,9 @@ export default function App() {
                          >
                            🔗 {link.text}
                          </a>
+                         {link.summary && (
+                           <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.25rem 0 0 1.5rem', lineHeight: '1.5', fontWeight: 400 }}>{link.summary}</p>
+                         )}
                        </li>
                      ))}
                    </ul>
@@ -372,39 +378,41 @@ export default function App() {
             ))}
           </div>
         </div>
-        <div className="glass-card" style={{ minHeight: '500px' }}>
+        <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
           <h2 style={{ marginBottom: '1rem', fontWeight: 600 }}>Total Value Distribution</h2>
-          <div style={{ width: '100%', height: '450px' }}>
-            <ResponsiveContainer>
-              <PieChart>
-                <Pie 
-                  data={pieData} 
-                  dataKey="value" 
-                  nameKey="name" 
-                  cx="50%" 
-                  cy="40%" 
-                  innerRadius={55} 
-                  outerRadius={90} 
-                  paddingAngle={4}
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill || PIE_COLORS[index % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  formatter={(value) => `${CURRENCY_SYMBOLS[currency]}${(value * FX_RATES[currency] / 32).toLocaleString(undefined, {maximumFractionDigits: 0})}`} 
-                  contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
-                />
-                <Legend 
-                  layout="vertical"
-                  align="center"
-                  verticalAlign="bottom" 
-                  iconType="circle"
-                  iconSize={10}
-                  wrapperStyle={{ fontSize: '0.9rem', paddingTop: '1.5rem', lineHeight: '2rem' }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+          <div style={{ display: 'flex', gap: '2rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 250px', height: '300px' }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie 
+                    data={pieData} 
+                    dataKey="value" 
+                    nameKey="name" 
+                    cx="50%" 
+                    cy="50%" 
+                    innerRadius={55} 
+                    outerRadius={90} 
+                    paddingAngle={4}
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.fill || PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value) => `${CURRENCY_SYMBOLS[currency]}${(value * FX_RATES[currency] / 32).toLocaleString(undefined, {maximumFractionDigits: 0})}`} 
+                    contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+              {pieData.map((entry, index) => (
+                <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: entry.fill || PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>{entry.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
