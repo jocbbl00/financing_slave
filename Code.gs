@@ -1,12 +1,4 @@
-// This is the Google Apps Script backend for the Wealth Allocator
-// Setup Instructions:
-// 1. Unzip or open your target Google Sheet
-// 2. Go to Extensions > Apps Script
-// 3. Paste this code into Code.gs
-// 4. Hit "Deploy" > "New Deployment"
-// 5. Select type "Web app"
-// 6. Execute as "Me", Who has access "Anyone"
-// 7. Copy the Web App URL and place it in your frontend code (App.jsx)
+// This is the updated Google Apps Script backend for the Wealth Allocator
 
 function doGet(e) {
   const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
@@ -43,22 +35,73 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({ error: "Invalid JSON payload" })).setMimeType(ContentService.MimeType.JSON);
   }
   
-  const { category, amount } = requestData;
-  // Here you can use the category to find the row in Stock_Input or OVERVIEW and modify it
-  // For demonstration, let's append it to a "Transactions" sheet or modify inline
   const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
-  const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName('Transactions');
-  if(sheet) {
-    sheet.appendRow([new Date(), category, amount]);
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  
+  // Custom script injection to load from initial Excel payload
+  if (requestData.action === 'init') {
+    let sheet = spreadsheet.getSheetByName('OVERVIEW');
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet('OVERVIEW');
+    }
+    
+    const data = requestData.data; 
+    // Format is a nested array. Needs to write specifically to B3
+    // because doGet looks at getRange(3, 2, 6, 4).
+    sheet.getRange(3, 2, data.length, data[0].length).setValues(data);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: 'Successfully populated the Google Sheet with Excel payload!'
+    })).setMimeType(ContentService.MimeType.JSON);
   }
   
+  const { category, amount } = requestData;
+  let txSheet = spreadsheet.getSheetByName('Transactions');
+  if(!txSheet) {
+    txSheet = spreadsheet.insertSheet('Transactions');
+    txSheet.appendRow(['Date', 'Category', 'Amount']);
+  }
+  txSheet.appendRow([new Date(), category, amount]);
+  
+  // Dynamically update the OVERVIEW sheet actuals
+  let overview = spreadsheet.getSheetByName('OVERVIEW');
+  if (overview) {
+    let rawData;
+    // Safe lookup size to prevent overflowing if new sheet is small
+    const numRows = Math.min(20, overview.getLastRow() - 2);
+    if(numRows > 0) {
+      rawData = overview.getRange(3, 2, numRows, 4).getValues();
+      let found = false;
+      for (let i = 0; i < rawData.length; i++) {
+        if (rawData[i][0] === category) {
+          found = true;
+          const isUsd = category.startsWith('USD');
+          if (isUsd) {
+             let oldUsd = Number(rawData[i][1]) || 0;
+             overview.getRange(3 + i, 3).setValue(oldUsd + Number(amount));
+             overview.getRange(3 + i, 4).setValue((oldUsd + Number(amount)) * 32); 
+          } else {
+             let oldNtd = Number(rawData[i][2]) || 0;
+             overview.getRange(3 + i, 4).setValue(oldNtd + Number(amount));
+             overview.getRange(3 + i, 3).setValue((oldNtd + Number(amount)) / 32);
+          }
+          break;
+        }
+      }
+      
+      if (!found) {
+        overview.appendRow(["", category, category.startsWith('USD') ? amount : amount/32, category.startsWith('USD') ? amount*32 : amount, 0.0]);
+      }
+    }
+  }
+
   return ContentService.createTextOutput(JSON.stringify({
     status: 'success',
     message: `Recorded ${amount} for ${category}`
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
-// Ensure CORS is allowed
 function doOptions(e) {
   var headers = {
     "Access-Control-Allow-Origin": "*",

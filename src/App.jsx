@@ -53,6 +53,8 @@ export default function App() {
   // Helper to get target safely
   const getTarget = (category) => customTargets[category] || 0;
 
+  const totalTarget = existingCategories.reduce((acc, cat) => acc + (customTargets[cat] || 0), 0);
+
   // Recalculate global percentages based on current total logic
   const totalUsd = portfolio.reduce((acc, curr) => {
     return acc + (curr.category.startsWith('USD') ? curr.amount : curr.amount / 32);
@@ -291,26 +293,60 @@ export default function App() {
       {/* ADJUST TARGETS MODAL */}
       <div className={`modal-overlay ${isTargetModalOpen ? 'active' : ''}`}>
         <div className="modal-content">
-          <h2 style={{ marginBottom: '1.5rem', color: '#0f172a' }}>Adjust Target Allocations</h2>
-          <p style={{ marginBottom: '1rem', color: '#475569', fontSize: '0.9rem' }}>Set your desired portfolio balance for tracking.</p>
+          <h2 style={{ marginBottom: '1rem', color: '#0f172a' }}>Adjust Target Allocations</h2>
+          
+          <div style={{ 
+            marginBottom: '1.5rem', 
+            padding: '1rem', 
+            borderRadius: '12px', 
+            background: totalTarget === 100 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+            color: totalTarget === 100 ? '#059669' : '#dc2626', 
+            fontWeight: 600, 
+            display: 'flex', 
+            justifyContent: 'space-between' 
+          }}>
+            <span>Total Allocation:</span>
+            <span>{totalTarget}% / 100%</span>
+          </div>
+          
           <form onSubmit={handleSaveTargets}>
             {existingCategories.map(cat => (
-              <div key={cat} className="form-group" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label style={{ margin: 0 }}>{cat} Target (%)</label>
-                <input 
-                  type="number" 
-                  className="form-control" 
-                  style={{ width: '100px', padding: '0.5rem' }}
-                  value={customTargets[cat] || 0}
-                  onChange={e => updateTarget(cat, e.target.value)}
-                  min="0"
-                  max="100"
-                />
+              <div key={cat} className="form-group" style={{ marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <label style={{ margin: 0, fontWeight: 600, color: '#334155' }}>{cat}</label>
+                  <span style={{ fontWeight: 600, color: '#0f172a' }}>{customTargets[cat] || 0}%</span>
+                </div>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <input 
+                    type="range" 
+                    style={{ flex: 1, accentColor: '#eab308' }}
+                    value={customTargets[cat] || 0}
+                    onChange={e => updateTarget(cat, e.target.value)}
+                    min="0"
+                    max="100"
+                  />
+                  <input 
+                    type="number" 
+                    className="form-control" 
+                    style={{ width: '80px', padding: '0.5rem', textAlign: 'center' }}
+                    value={customTargets[cat] || 0}
+                    onChange={e => updateTarget(cat, e.target.value)}
+                    min="0"
+                    max="100"
+                  />
+                </div>
               </div>
             ))}
             <div className="modal-actions">
               <button type="button" className="btn-secondary" onClick={() => setIsTargetModalOpen(false)}>Cancel</button>
-              <button type="submit" className="primary-btn">Save Targets</button>
+              <button 
+                type="submit" 
+                className="primary-btn" 
+                disabled={totalTarget !== 100} 
+                style={{ opacity: totalTarget === 100 ? 1 : 0.5, cursor: totalTarget === 100 ? 'pointer' : 'not-allowed' }}
+              >
+                Save Targets
+              </button>
             </div>
           </form>
         </div>
