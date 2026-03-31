@@ -372,9 +372,9 @@ export default function App() {
             ))}
           </div>
         </div>
-        <div className="glass-card" style={{ minHeight: '350px' }}>
+        <div className="glass-card" style={{ minHeight: '500px' }}>
           <h2 style={{ marginBottom: '1rem', fontWeight: 600 }}>Total Value Distribution</h2>
-          <div style={{ width: '100%', height: '300px' }}>
+          <div style={{ width: '100%', height: '450px' }}>
             <ResponsiveContainer>
               <PieChart>
                 <Pie 
@@ -382,11 +382,10 @@ export default function App() {
                   dataKey="value" 
                   nameKey="name" 
                   cx="50%" 
-                  cy="50%" 
-                  innerRadius={60} 
-                  outerRadius={95} 
-                  paddingAngle={5}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  cy="40%" 
+                  innerRadius={55} 
+                  outerRadius={90} 
+                  paddingAngle={4}
                 >
                   {pieData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill || PIE_COLORS[index % PIE_COLORS.length]} />
@@ -397,9 +396,12 @@ export default function App() {
                   contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                 />
                 <Legend 
+                  layout="vertical"
+                  align="center"
                   verticalAlign="bottom" 
-                  iconType="circle" 
-                  wrapperStyle={{ fontSize: '0.85rem', paddingTop: '1rem' }}
+                  iconType="circle"
+                  iconSize={10}
+                  wrapperStyle={{ fontSize: '0.9rem', paddingTop: '1.5rem', lineHeight: '2rem' }}
                 />
               </PieChart>
             </ResponsiveContainer>
