@@ -2,28 +2,45 @@
 
 function doGet(e) {
   const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
-  const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName('OVERVIEW');
-  if(!sheet) {
+  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  const overviewSheet = spreadsheet.getSheetByName('OVERVIEW');
+  const txSheet = spreadsheet.getSheetByName('Transactions');
+  
+  if(!overviewSheet) {
     return ContentService.createTextOutput(JSON.stringify({ error: "Sheet OVERVIEW not found" })).setMimeType(ContentService.MimeType.JSON);
   }
   
-  // Assuming row 3 to 8 are the assets: USD Cash, USD Preferred, USD Stock, NTD Cash, NTD Preferred, NTD Stock
-  // Column B is Category, Column C is USD amount or NTD amount etc.
-  const data = sheet.getRange(3, 2, 6, 4).getValues(); 
-  // e.g., get categories, current USD, current NTD, current %
-  
-  const formattedData = data.map(row => {
-    return {
+  // Dynamically get all rows in OVERVIEW starting from Row 3
+  const lastRow = overviewSheet.getLastRow();
+  let overviewData = [];
+  if (lastRow >= 3) {
+    const rawData = overviewSheet.getRange(3, 2, lastRow - 2, 4).getValues();
+    overviewData = rawData.map(row => ({
       category: row[0],
       currentUsd: row[1],
       currentNtd: row[2],
       percentage: row[3] * 100, // convert decimal to percentage
-    };
-  });
+    })).filter(r => r.category !== ""); // filter out empty rows
+  }
+
+  // Fetch Transactions for historical chart
+  let txData = [];
+  if (txSheet) {
+    const txLastRow = txSheet.getLastRow();
+    if (txLastRow >= 2) {
+      const rawTx = txSheet.getRange(2, 1, txLastRow - 1, 3).getValues(); // Date, Category, Amount
+      txData = rawTx.map(row => ({
+        date: row[0],
+        category: row[1],
+        amount: row[2]
+      }));
+    }
+  }
   
   return ContentService.createTextOutput(JSON.stringify({
     status: 'success',
-    data: formattedData
+    data: overviewData,
+    transactions: txData
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -38,38 +55,39 @@ function doPost(e) {
   const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   
-  // Custom script injection to load from initial Excel payload
-  if (requestData.action === 'init') {
-    let sheet = spreadsheet.getSheetByName('OVERVIEW');
-    if (!sheet) {
-      sheet = spreadsheet.insertSheet('OVERVIEW');
+  // Custom script injection to load historical tx payload
+  if (requestData.action === 'bulk_tx') {
+    let txSheet = spreadsheet.getSheetByName('Transactions');
+    if (!txSheet) {
+      txSheet = spreadsheet.insertSheet('Transactions');
+      txSheet.appendRow(['Date', 'Category', 'Amount']);
     }
     
-    const data = requestData.data; 
-    // Format is a nested array. Needs to write specifically to B3
-    // because doGet looks at getRange(3, 2, 6, 4).
-    sheet.getRange(3, 2, data.length, data[0].length).setValues(data);
+    const rows = requestData.data; // Expected: [[Date, Category, Amount], ...]
+    if(rows && rows.length > 0) {
+      txSheet.getRange(txSheet.getLastRow() + 1, 1, rows.length, 3).setValues(rows);
+    }
     
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success',
-      message: 'Successfully populated the Google Sheet with Excel payload!'
+      message: `Successfully loaded ${rows.length} historical transactions!`
     })).setMimeType(ContentService.MimeType.JSON);
   }
   
-  const { category, amount } = requestData;
+  const { category, amount, date } = requestData;
   let txSheet = spreadsheet.getSheetByName('Transactions');
   if(!txSheet) {
     txSheet = spreadsheet.insertSheet('Transactions');
     txSheet.appendRow(['Date', 'Category', 'Amount']);
   }
-  txSheet.appendRow([new Date(), category, amount]);
+  const insertDate = date ? new Date(date) : new Date();
+  txSheet.appendRow([insertDate, category, amount]);
   
   // Dynamically update the OVERVIEW sheet actuals
   let overview = spreadsheet.getSheetByName('OVERVIEW');
   if (overview) {
     let rawData;
-    // Safe lookup size to prevent overflowing if new sheet is small
-    const numRows = Math.min(20, overview.getLastRow() - 2);
+    const numRows = Math.max(0, overview.getLastRow() - 2);
     if(numRows > 0) {
       rawData = overview.getRange(3, 2, numRows, 4).getValues();
       let found = false;
@@ -93,6 +111,8 @@ function doPost(e) {
       if (!found) {
         overview.appendRow(["", category, category.startsWith('USD') ? amount : amount/32, category.startsWith('USD') ? amount*32 : amount, 0.0]);
       }
+    } else {
+      overview.appendRow(["", category, category.startsWith('USD') ? amount : amount/32, category.startsWith('USD') ? amount*32 : amount, 0.0]);
     }
   }
 

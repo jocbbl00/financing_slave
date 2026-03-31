@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import './index.css';
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbyfNl53aUdseOlPdl-6ffWlZotHqwQmw6tPZJCMO8veRLnUWVaGNasy4jLCNdhkAexf0w/exec';
 
-// Professional modern colors for the pie chart
 const PIE_COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#0ea5e9', '#facc15', '#64748b'];
 
 export default function App() {
   const [portfolio, setPortfolio] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
@@ -34,7 +34,7 @@ export default function App() {
       const json = await res.json();
       
       if (json.status === 'success' && json.data) {
-        // Map backend data
+        // Map backend data dynamically resolving everything from row 3 downwards!
         const formatted = json.data.map(item => ({
           category: item.category,
           amount: item.category.startsWith('USD') ? item.currentUsd : item.currentNtd,
@@ -42,6 +42,10 @@ export default function App() {
           currentNtd: item.currentNtd
         }));
         setPortfolio(formatted);
+      }
+
+      if (json.transactions) {
+        setTransactions(json.transactions);
       }
     } catch (err) {
       console.error('Failed to fetch portfolio data', err);
@@ -54,16 +58,9 @@ export default function App() {
   const getTarget = (category) => customTargets[category] || 0;
   const totalTarget = existingCategories.reduce((acc, cat) => acc + (customTargets[cat] || 0), 0);
 
-  // Recalculate true percentages & handle Debt logically
-  // If an amount is negative or mapped as debt, it lowers net worth.
-  // We'll calculate Gross Assets (only positive bounds) vs Net Equity (subtracting debts).
   const totalUsdGross = portfolio.reduce((acc, curr) => {
     const val = curr.category.startsWith('USD') ? curr.amount : curr.amount / 32;
     return val > 0 ? acc + val : acc;
-  }, 0);
-
-  const totalUsdNet = portfolio.reduce((acc, curr) => {
-    return acc + (curr.category.startsWith('USD') ? curr.amount : curr.amount / 32);
   }, 0);
 
   const totalUsdDebt = portfolio.reduce((acc, curr) => {
@@ -71,9 +68,10 @@ export default function App() {
     return val < 0 ? acc + Math.abs(val) : acc;
   }, 0);
 
-  const totalNtdNet = portfolio.reduce((acc, curr) => acc + curr.currentNtd, 0);
+  const totalUsdNet = totalUsdGross - totalUsdDebt;
+  const totalNtdNet = totalUsdNet * 32;
 
-  // Calculate base for percentage display (usually based on gross positive assets)
+  // Calculate base for percentage display based strictly on gross positive assets
   const getTotalNtdBase = () => {
     return portfolio.reduce((acc, c) => {
       const val = c.category.startsWith('USD') ? c.amount * 32 : c.amount;
@@ -91,21 +89,47 @@ export default function App() {
     };
   });
 
-  // Prepare Pie Chart data (filtering out negative debt balances so pie renders correctly)
-  const pieData = enrichedPortfolio
-    .filter(a => a.amount > 0)
-    .map(a => ({
-      name: a.category,
-      value: a.category.startsWith('USD') ? a.amount * 32 : a.amount // normalized pie values
-    }));
+  // Pie Chart Data (Absolute magnitude mapping Gross Assets + Gross Liabilities)
+  // so debts are visualized distinctly in the chart
+  const pieData = enrichedPortfolio.map(a => ({
+    name: a.category + (a.amount < 0 ? " (Debt)" : ""),
+    rawAmount: a.amount,
+    value: Math.abs(a.category.startsWith('USD') ? a.amount * 32 : a.amount),
+    fill: a.amount < 0 ? '#ef4444' : undefined // Custom fill hook for later versions, defaulting via pie mapping below
+  }));
+
+  // Build Historical Chart Data from Transactions
+  // We will group transactions by Year-Month to generate a growth line.
+  // We assume transactions track delta changes.
+  const chartMap = {};
+  let rollingNetWorth = 0;
+  // Sorting chronologically
+  const sortedTx = [...transactions].sort((a,b) => new Date(a.date) - new Date(b.date));
+  
+  sortedTx.forEach(tx => {
+    const d = new Date(tx.date);
+    const key = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`; // YYYY-MM
+    
+    // Normalize logic for mock chart
+    const txAmountUsd = tx.category.startsWith('USD') ? Number(tx.amount) : Number(tx.amount) / 32;
+    rollingNetWorth += txAmountUsd;
+    
+    chartMap[key] = rollingNetWorth;
+  });
+
+  const historicalChartData = Object.entries(chartMap).map(([dateLabel, netWorthUsd]) => ({
+    name: dateLabel,
+    netWorth: Math.round(netWorthUsd)
+  }));
+
 
   const analyzePortfolio = () => {
     const adviceList = [];
-    adviceList.push("🌍 Macro View: US Interest rates hold around 3.5%-3.75%, making safe cash attractive, but geopolitical volatility highlights the need for diversification. Your transactions map Net Equity directly onto Google Sheets historical logs.");
+    adviceList.push("🌍 Macro View: US Interest rates hold around 3.5%-3.75%, preserving cash yields. Your portfolio now perfectly factors raw debt alongside absolute Gross Assets.");
 
     let flagged = false;
     enrichedPortfolio.forEach(asset => {
-      if (asset.amount < 0) return; // skip target analysis for debt
+      if (asset.amount < 0) return; 
       const diff = asset.percentage - asset.target;
       if (asset.target > 0) {
         if (diff > 5) { adviceList.push(`⚠️ You are overweight in ${asset.category} by ${diff.toFixed(1)}%.`); flagged = true; }
@@ -114,7 +138,7 @@ export default function App() {
     });
 
     if (!flagged) {
-      adviceList.push("✨ Your assets are moving tightly with your targeted goals.");
+      adviceList.push("✨ Your assets are cleanly matching dynamic targets.");
     }
     return adviceList;
   };
@@ -124,7 +148,7 @@ export default function App() {
     e.preventDefault();
     setIsSaving(true);
     let finalAmount = Number(formData.amount);
-    if (formData.isDebt) finalAmount = -Math.abs(finalAmount); // Ensure it's negative if marked as liability
+    if (formData.isDebt) finalAmount = -Math.abs(finalAmount);
     
     try {
       await fetch(API_URL, {
@@ -132,19 +156,12 @@ export default function App() {
         body: JSON.stringify({ category: formData.category, amount: finalAmount }),
       });
 
-      setPortfolio(prev => {
-        const existing = prev.find(p => p.category.toLowerCase() === formData.category.toLowerCase());
-        if (existing) {
-          return prev.map(p => p.category.toLowerCase() === formData.category.toLowerCase() ? { ...p, amount: p.amount + finalAmount, currentNtd: p.currentNtd + (formData.category.startsWith('USD') ? finalAmount*32 : finalAmount) } : p);
-        } else {
-          return [...prev, { category: formData.category, amount: finalAmount, currentNtd: formData.category.startsWith('USD') ? finalAmount * 32 : finalAmount }];
-        }
-      });
+      // Optimistic internal cache refetch
       setIsModalOpen(false);
       setFormData({ category: '', amount: '', isDebt: false });
+      fetchPortfolio(); 
     } catch (err) {
       console.error('Failed to update asset', err);
-    } finally {
       setIsSaving(false);
     }
   };
@@ -162,7 +179,7 @@ export default function App() {
   if (isLoading) {
     return (
       <div className="app-container" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <h2 style={{ color: '#0f172a' }}>Loading Portfolio...</h2>
+        <h2 style={{ color: '#0f172a' }}>Loading Historical Spreadsheets...</h2>
       </div>
     );
   }
@@ -182,7 +199,7 @@ export default function App() {
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Update Asset / Debt
+            Update Ledger / Debt
           </button>
         </div>
       </header>
@@ -209,23 +226,31 @@ export default function App() {
           <div className="stat-value">NT${totalNtdNet.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
         </div>
         
-        <div className="glass-card insight-card" style={{ gridColumn: '1 / -1' }}>
-          <div className="stat-label" style={{ marginBottom: '1rem' }}>AI Portfolio Advisor</div>
-          <ul className="insight-list">
-            {advice.map((msg, idx) => (
-               <li key={idx}>
-                 <div className="insight-icon">{idx === 0 ? '📊' : msg.includes('⚠️') ? '⚠️' : msg.includes('📈') ? '📈' : '✨'}</div>
-                 <p style={{ fontSize: '1rem', color: '#1e293b', fontWeight: 500 }}>{msg}</p>
-               </li>
-            ))}
-          </ul>
+        <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
+          <h2 style={{ marginBottom: '1rem', fontWeight: 600 }}>Historical Net Equity Graph (USD)</h2>
+          {historicalChartData.length > 0 ? (
+             <div style={{ width: '100%', height: '250px' }}>
+                <ResponsiveContainer>
+                  <LineChart data={historicalChartData}>
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <XAxis dataKey="name" stroke="#64748b" />
+                    <YAxis stroke="#64748b" />
+                    <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                    <Legend />
+                    <Line type="monotone" dataKey="netWorth" name="Net Worth (USD)" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+             </div>
+          ) : (
+            <p style={{ color: '#475569' }}>No historical transactions populated from the spreadsheet yet.</p>
+          )}
         </div>
       </div>
 
       <div className="dashboard-grid">
         {/* Pie Chart Card */}
         <div className="glass-card" style={{ minHeight: '350px' }}>
-          <h2 style={{ marginBottom: '1rem', fontWeight: 600 }}>Wealth Distribution</h2>
+          <h2 style={{ marginBottom: '1rem', fontWeight: 600 }}>Total Value Distribution (Including absolute Debt scale)</h2>
           <div style={{ width: '100%', height: '300px' }}>
             <ResponsiveContainer>
               <PieChart>
@@ -240,11 +265,11 @@ export default function App() {
                   paddingAngle={5}
                 >
                   {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    <Cell key={`cell-${index}`} fill={entry.fill || PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip 
-                  formatter={(value) => `NT$${value.toLocaleString(undefined, {maximumFractionDigits: 0})}`} 
+                  formatter={(value) => `Magnitude: NT$${value.toLocaleString(undefined, {maximumFractionDigits: 0})}`} 
                   contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                 />
               </PieChart>
