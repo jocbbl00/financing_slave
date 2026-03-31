@@ -66,6 +66,11 @@ export default function App() {
     return acc + (curr.category.startsWith('USD') ? curr.amount : curr.amount / 32);
   }, 0);
 
+  const totalUsdDebt = portfolio.reduce((acc, curr) => {
+    const val = curr.category.startsWith('USD') ? curr.amount : curr.amount / 32;
+    return val < 0 ? acc + Math.abs(val) : acc;
+  }, 0);
+
   const totalNtdNet = portfolio.reduce((acc, curr) => acc + curr.currentNtd, 0);
 
   // Calculate base for percentage display (usually based on gross positive assets)
@@ -182,7 +187,7 @@ export default function App() {
         </div>
       </header>
 
-      <div className="dashboard-grid">
+      <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
         <div className="glass-card stat-card">
           <div className="stat-label">Net Equity (USD)</div>
           <div className="stat-value">${totalUsdNet.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
@@ -190,10 +195,20 @@ export default function App() {
             Gross Assets: ${totalUsdGross.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
         </div>
+        
+        <div className="glass-card stat-card" style={{ borderTop: '4px solid #ef4444' }}>
+          <div className="stat-label">Remaining Debt (USD)</div>
+          <div className="stat-value" style={{ color: '#ef4444' }}>${totalUsdDebt.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+          <div className="change-indicator" style={{ color: '#dc2626' }}>
+            NTD Debt Equivalent: NT${(totalUsdDebt * 32).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </div>
+        </div>
+
         <div className="glass-card stat-card">
           <div className="stat-label">Net Equity (NTD)</div>
           <div className="stat-value">NT${totalNtdNet.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
         </div>
+        
         <div className="glass-card insight-card" style={{ gridColumn: '1 / -1' }}>
           <div className="stat-label" style={{ marginBottom: '1rem' }}>AI Portfolio Advisor</div>
           <ul className="insight-list">
