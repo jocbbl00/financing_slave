@@ -6,6 +6,9 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbyfNl53aUdseOlPdl-6ffWl
 
 const PIE_COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#0ea5e9', '#facc15', '#64748b'];
 
+const FX_RATES = { USD: 1, NTD: 32, JPY: 150 };
+const CURRENCY_SYMBOLS = { USD: '$', NTD: 'NT$', JPY: '¥' };
+
 export default function App() {
   const [portfolio, setPortfolio] = useState([]);
   const [transactions, setTransactions] = useState([]);
@@ -13,6 +16,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [timeFilter, setTimeFilter] = useState('All');
+  const [currency, setCurrency] = useState('USD');
   
   const [formData, setFormData] = useState({ category: '', amount: '', isDebt: false });
   const [isSaving, setIsSaving] = useState(false);
@@ -71,6 +75,11 @@ export default function App() {
 
   const totalUsdNet = totalUsdGross - totalUsdDebt;
   const totalNtdNet = totalUsdNet * 32;
+
+  const fmt = (usdVal) => {
+    const converted = usdVal * FX_RATES[currency];
+    return `${CURRENCY_SYMBOLS[currency]}${converted.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  };
 
   // Calculate base for percentage display based strictly on gross positive assets
   const getTotalNtdBase = () => {
@@ -214,10 +223,30 @@ export default function App() {
     <div className="app-container">
       <header>
         <div>
-          <h1>Wealth Allocator</h1>
+          <h1>Yarin's Accounting Slave</h1>
           <p>Real-time Portfolio Tracking & Analytics</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.3)', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.5)' }}>
+            {['USD', 'NTD', 'JPY'].map(c => (
+              <button
+                key={c}
+                onClick={() => setCurrency(c)}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  border: 'none',
+                  background: currency === c ? '#facc15' : 'transparent',
+                  color: currency === c ? '#0f172a' : '#475569',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
           <button className="primary-btn secondary" onClick={() => setIsTargetModalOpen(true)}>
             Adjust Targets
           </button>
@@ -233,26 +262,17 @@ export default function App() {
       <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
         <div className="glass-card stat-card">
           <div className="stat-label">Net Equity</div>
-          <div className="stat-value">${totalUsdNet.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-          <div className="change-indicator change-positive">
-            NT${totalNtdNet.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </div>
+          <div className="stat-value">{fmt(totalUsdNet)}</div>
         </div>
 
         <div className="glass-card stat-card">
           <div className="stat-label">Gross Assets</div>
-          <div className="stat-value">${totalUsdGross.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-          <div className="change-indicator change-positive">
-            NT${(totalUsdGross * 32).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </div>
+          <div className="stat-value">{fmt(totalUsdGross)}</div>
         </div>
         
         <div className="glass-card stat-card" style={{ borderTop: '4px solid #ef4444' }}>
           <div className="stat-label">Remaining Debt</div>
-          <div className="stat-value" style={{ color: '#ef4444' }}>${totalUsdDebt.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-          <div className="change-indicator" style={{ color: '#dc2626' }}>
-            NT${(totalUsdDebt * 32).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </div>
+          <div className="stat-value" style={{ color: '#ef4444' }}>{fmt(totalUsdDebt)}</div>
         </div>
         
         <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
