@@ -378,11 +378,11 @@ export default function App() {
             ))}
           </div>
         </div>
-        <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
+        <div className="glass-card">
           <h2 style={{ marginBottom: '1rem', fontWeight: 600 }}>Total Value Distribution</h2>
-          <div style={{ display: 'flex', gap: '2rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 250px', height: '300px' }}>
-              <ResponsiveContainer>
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+            <div style={{ flex: '1 1 200px', minHeight: '250px' }}>
+              <ResponsiveContainer width="100%" height={250}>
                 <PieChart>
                   <Pie 
                     data={pieData} 
@@ -390,8 +390,8 @@ export default function App() {
                     nameKey="name" 
                     cx="50%" 
                     cy="50%" 
-                    innerRadius={55} 
-                    outerRadius={90} 
+                    innerRadius={50} 
+                    outerRadius={85} 
                     paddingAngle={4}
                   >
                     {pieData.map((entry, index) => (
@@ -405,11 +405,11 @@ export default function App() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
               {pieData.map((entry, index) => (
-                <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                  <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: entry.fill || PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
-                  <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#334155' }}>{entry.name}</span>
+                <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: entry.fill || PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>{entry.name}</span>
                 </div>
               ))}
             </div>
