@@ -12,6 +12,7 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
+  const [timeFilter, setTimeFilter] = useState('All');
   
   const [formData, setFormData] = useState({ category: '', amount: '', isDebt: false });
   const [isSaving, setIsSaving] = useState(false);
@@ -122,6 +123,13 @@ export default function App() {
     netWorth: Math.round(netWorthUsd)
   }));
 
+  let displayChartData = historicalChartData;
+  if (timeFilter === '6M') {
+    displayChartData = historicalChartData.slice(-6);
+  } else if (timeFilter === '1Y') {
+    displayChartData = historicalChartData.slice(-12);
+  }
+
 
   const analyzePortfolio = () => {
     const adviceList = [];
@@ -206,32 +214,57 @@ export default function App() {
 
       <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
         <div className="glass-card stat-card">
-          <div className="stat-label">Net Equity (USD)</div>
+          <div className="stat-label">Net Equity</div>
           <div className="stat-value">${totalUsdNet.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
           <div className="change-indicator change-positive">
-            Gross Assets: ${totalUsdGross.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </div>
-        </div>
-        
-        <div className="glass-card stat-card" style={{ borderTop: '4px solid #ef4444' }}>
-          <div className="stat-label">Remaining Debt (USD)</div>
-          <div className="stat-value" style={{ color: '#ef4444' }}>${totalUsdDebt.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
-          <div className="change-indicator" style={{ color: '#dc2626' }}>
-            NTD Debt Equivalent: NT${(totalUsdDebt * 32).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            NT${totalNtdNet.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
         </div>
 
         <div className="glass-card stat-card">
-          <div className="stat-label">Net Equity (NTD)</div>
-          <div className="stat-value">NT${totalNtdNet.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+          <div className="stat-label">Gross Assets</div>
+          <div className="stat-value">${totalUsdGross.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+          <div className="change-indicator change-positive">
+            NT${(totalUsdGross * 32).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </div>
+        </div>
+        
+        <div className="glass-card stat-card" style={{ borderTop: '4px solid #ef4444' }}>
+          <div className="stat-label">Remaining Debt</div>
+          <div className="stat-value" style={{ color: '#ef4444' }}>${totalUsdDebt.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+          <div className="change-indicator" style={{ color: '#dc2626' }}>
+            NT${(totalUsdDebt * 32).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </div>
         </div>
         
         <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
-          <h2 style={{ marginBottom: '1rem', fontWeight: 600 }}>Historical Net Equity Graph (USD)</h2>
-          {historicalChartData.length > 0 ? (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h2 style={{ fontWeight: 600 }}>Historical Net Equity Trend (USD)</h2>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {['6M', '1Y', 'All'].map(tf => (
+                <button 
+                  key={tf}
+                  onClick={() => setTimeFilter(tf)}
+                  style={{ 
+                    padding: '0.25rem 0.75rem', 
+                    borderRadius: '20px', 
+                    border: '1px solid #cbd5e1', 
+                    background: timeFilter === tf ? '#facc15' : 'transparent',
+                    color: timeFilter === tf ? '#0f172a' : '#475569',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  {tf}
+                </button>
+              ))}
+            </div>
+          </div>
+          {displayChartData.length > 0 ? (
              <div style={{ width: '100%', height: '250px' }}>
                 <ResponsiveContainer>
-                  <LineChart data={historicalChartData}>
+                  <LineChart data={displayChartData}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="name" stroke="#64748b" />
                     <YAxis stroke="#64748b" />

@@ -10,7 +10,7 @@ APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfNl53aUdseOlPdl-6ff
 def main():
     print("Reading Excel file for historical data...")
     wb = openpyxl.load_workbook(EXCEL_FILE, data_only=True)
-    ws = wb['\$\$\$\$\$']
+    ws = wb['$$$$$']
     
     rows = list(ws.iter_rows(values_only=True))
     
