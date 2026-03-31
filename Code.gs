@@ -9,7 +9,8 @@
 // 7. Copy the Web App URL and place it in your frontend code (App.jsx)
 
 function doGet(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('OVERVIEW');
+  const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
+  const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName('OVERVIEW');
   if(!sheet) {
     return ContentService.createTextOutput(JSON.stringify({ error: "Sheet OVERVIEW not found" })).setMimeType(ContentService.MimeType.JSON);
   }
@@ -45,7 +46,8 @@ function doPost(e) {
   const { category, amount } = requestData;
   // Here you can use the category to find the row in Stock_Input or OVERVIEW and modify it
   // For demonstration, let's append it to a "Transactions" sheet or modify inline
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Transactions');
+  const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
+  const sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName('Transactions');
   if(sheet) {
     sheet.appendRow([new Date(), category, amount]);
   }
