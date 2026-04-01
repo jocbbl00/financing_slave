@@ -109,33 +109,43 @@ export default function App() {
   }));
 
   // Build Historical Chart Data from Transactions
-  // Group transactions by Year-Month to generate a gross equity line.
+  // We use the historical deltas to build the trend curve shape, then anchor it to explicitly match the current Gross Equity.
   const chartMap = {};
-  const categoryBalances = {};
+  let rollingValue = 0;
+  
   // Sorting chronologically
   const sortedTx = [...transactions].sort((a,b) => new Date(a.date) - new Date(b.date));
   
   sortedTx.forEach(tx => {
-    const d = new Date(tx.date);
-    const key = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`; // YYYY-MM
-    
-    if (!categoryBalances[tx.category]) categoryBalances[tx.category] = 0;
-    categoryBalances[tx.category] += Number(tx.amount);
-    
-    let currentGrossUsd = 0;
-    for (const [cat, bal] of Object.entries(categoryBalances)) {
-      if (bal > 0) {
-        currentGrossUsd += cat.startsWith('USD') ? bal : bal / 32;
-      }
+    if (tx.category === 'USD Historical Delta') {
+      const d = new Date(tx.date);
+      const key = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`; // YYYY-MM
+      
+      const txAmountUsd = tx.category.startsWith('USD') ? Number(tx.amount) : Number(tx.amount) / 32;
+      rollingValue += txAmountUsd;
+      
+      chartMap[key] = rollingValue;
     }
-    
-    chartMap[key] = currentGrossUsd;
   });
 
-  const historicalChartData = Object.entries(chartMap).map(([dateLabel, grossUsd]) => ({
+  const keys = Object.keys(chartMap);
+  const lastKey = keys[keys.length - 1];
+  const lastVal = lastKey ? chartMap[lastKey] : 0;
+  const offset = totalUsdGross - lastVal;
+
+  const historicalChartData = keys.map(dateLabel => ({
     name: dateLabel,
-    equity: Math.round(grossUsd * FX_RATES[currency])
+    equity: Math.round((chartMap[dateLabel] + offset) * FX_RATES[currency])
   }));
+
+  // Ensure current month is plotted if it's missing from the history array
+  const currentKey = `${new Date().getFullYear()}-${(new Date().getMonth()+1).toString().padStart(2, '0')}`;
+  if (keys.length > 0 && lastKey !== currentKey) {
+     historicalChartData.push({
+        name: currentKey,
+        equity: Math.round(totalUsdGross * FX_RATES[currency])
+     });
+  }
 
   let displayChartData = historicalChartData;
   if (timeFilter === '6M') {
