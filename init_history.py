@@ -17,17 +17,16 @@ ws = wb['$$$$$']
 
 rows = []
 for row in ws.iter_rows(min_row=3, values_only=True):
-    date_val = row[0]       # Column A: Date
-    total_usd = row[23]     # Column X: Total_in_USD (gross assets)
-    debt_usd = row[16]      # Column Q: Remaining_Loan_USD
+    date_val = row[0]
+    total_usd = row[23]     # Total_in_USD (gross assets)
+    debt_usd = row[16]      # Remaining_Loan_USD
     
     if date_val is None or total_usd is None:
         continue
     
-    # Only include historical data (up to and including current month)
     if isinstance(date_val, datetime):
         if date_val > datetime(2026, 4, 1):
-            continue  # Skip future forecast rows
+            continue
         date_str = date_val.strftime('%Y-%m-%d')
     else:
         continue
@@ -41,7 +40,7 @@ for row in ws.iter_rows(min_row=3, values_only=True):
 
 print(f"\nTotal historical rows: {len(rows)}")
 
-# Send to Google Sheets
+# Send to Google Sheets - exact same approach as init_portfolio.py (which worked)
 ctx = ssl.create_default_context()
 ctx.check_hostname = False
 ctx.verify_mode = ssl.CERT_NONE
@@ -53,7 +52,7 @@ req = urllib.request.Request(
     headers={'Content-Type': 'application/json'}
 )
 
-print("Beaming historical data to Google Sheets...")
+print("\nBeaming historical data to Google Sheets...")
 try:
     response = urllib.request.urlopen(req, context=ctx)
     result = response.read().decode('utf-8')
