@@ -80,12 +80,14 @@ export default function App() {
   const totalTarget = existingCategories.reduce((acc, cat) => acc + (customTargets[cat] || 0), 0);
 
   const totalUsdGross = portfolio.reduce((acc, curr) => {
-    const val = curr.category.startsWith('USD') ? curr.amount : curr.amount / 32;
+    const isUsd = curr.category.startsWith('USD') || curr.category === 'Loan';
+    const val = isUsd ? curr.amount : curr.amount / 32;
     return val > 0 ? acc + val : acc;
   }, 0);
 
   const totalUsdDebt = portfolio.reduce((acc, curr) => {
-    const val = curr.category.startsWith('USD') ? curr.amount : curr.amount / 32;
+    const isUsd = curr.category.startsWith('USD') || curr.category === 'Loan';
+    const val = isUsd ? curr.amount : curr.amount / 32;
     return val < 0 ? acc + Math.abs(val) : acc;
   }, 0);
 
@@ -100,7 +102,8 @@ export default function App() {
   // Calculate base for percentage display based strictly on gross positive assets
   const getTotalNtdBase = () => {
     return portfolio.reduce((acc, c) => {
-      const val = c.category.startsWith('USD') ? c.amount * 32 : c.amount;
+      const isUsd = c.category.startsWith('USD') || c.category === 'Loan';
+      const val = isUsd ? c.amount * 32 : c.amount;
       return val > 0 ? acc + val : acc;
     }, 0);
   };
