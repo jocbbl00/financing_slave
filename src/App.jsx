@@ -10,16 +10,19 @@ const FX_RATES = { USD: 1, NTD: 32, JPY: 150 };
 const CURRENCY_SYMBOLS = { USD: '$', NTD: 'NT$', JPY: '¥' };
 
 export default function App() {
-  const [portfolio, setPortfolio] = useState([]);
+  const [portfolio, setPortfolio] = useState([]);       // OVERVIEW-level 6-category summary
+  const [portfolioItems, setPortfolioItems] = useState([]); // Individual stock/cash/debt rows
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
+  const [isCashModalOpen, setIsCashModalOpen] = useState(false);
   const [timeFilter, setTimeFilter] = useState('All');
   const [currency, setCurrency] = useState('USD');
   const [activeTab, setActiveTab] = useState('Overview');
   
   const [formData, setFormData] = useState({ category: '', amount: '', isDebt: false });
+  const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   
   // Custom Targets State loaded from localStorage
@@ -40,14 +43,19 @@ export default function App() {
       const json = await res.json();
       
       if (json.status === 'success' && json.data) {
-        // Map backend data dynamically resolving everything from row 3 downwards!
+        // Map backend summary data (6 categories + Loan)
         const formatted = json.data.map(item => ({
           category: item.category,
-          amount: item.category.startsWith('USD') ? item.currentUsd : item.currentNtd,
+          amount: item.category.startsWith('USD') || item.category === 'Loan' ? item.currentUsd : item.currentNtd,
           percentage: item.percentage,
           currentNtd: item.currentNtd
         }));
         setPortfolio(formatted);
+      }
+
+      // Individual portfolio rows (stocks with tickers, cash accounts, debt)
+      if (json.portfolio) {
+        setPortfolioItems(json.portfolio);
       }
 
       if (json.transactions) {
@@ -229,13 +237,60 @@ export default function App() {
   };
   const advice = analyzePortfolio();
 
-  const usStocksData = portfolio
-      .filter(a => a.category.startsWith('USD Stock') && a.amount > 0)
-      .map(a => ({ name: a.category, value: Math.abs(a.amount) }));
+  // Build pie chart data from individual portfolio items (using tickers)
+  const usStocksData = portfolioItems
+      .filter(a => a.category === 'USD Stock' && (Number(a.usdValue) || 0) > 0)
+      .map(a => ({ name: a.ticker, value: Number(a.usdValue) || 0 }));
 
-  const twStocksData = portfolio
-      .filter(a => a.category.startsWith('NTD Stock') && a.amount > 0)
-      .map(a => ({ name: a.category, value: Math.abs(a.amount) }));
+  const twStocksData = portfolioItems
+      .filter(a => a.category === 'NTD Stock' && (Number(a.ntdValue) || 0) > 0)
+      .map(a => ({ name: a.ticker, value: Number(a.ntdValue) || 0 }));
+
+  // Cash accounts for the edit modal
+  const cashAccounts = portfolioItems.filter(a => 
+    a.category === 'USD Cash' || a.category === 'NTD Cash' || 
+    a.category === 'USD Preferred' || a.category === 'NTD Preferred' ||
+    a.category === 'Loan'
+  );
+
+  const handleUpdateCash = async (ticker, amount, currency) => {
+    setIsSaving(true);
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'update_cash', ticker, amount: Number(amount), currency }),
+      });
+      fetchPortfolio();
+    } catch (err) {
+      console.error('Failed to update cash', err);
+    } finally {
+      setIsSaving(false);
+      setIsCashModalOpen(false);
+      setCashEdits({});
+    }
+  };
+
+  const handleSaveAllCash = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      for (const [ticker, amount] of Object.entries(cashEdits)) {
+        const acct = cashAccounts.find(a => a.ticker === ticker);
+        const cur = acct && (acct.category.startsWith('NTD') ? 'NTD' : 'USD');
+        await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'update_cash', ticker, amount: Number(amount), currency: cur }),
+        });
+      }
+      fetchPortfolio();
+    } catch (err) {
+      console.error('Failed to update cash', err);
+    } finally {
+      setIsSaving(false);
+      setIsCashModalOpen(false);
+      setCashEdits({});
+    }
+  };
 
   const handleAddAsset = async (e) => {
     e.preventDefault();
@@ -310,6 +365,9 @@ export default function App() {
           </div>
           <button className="primary-btn secondary" onClick={() => setIsTargetModalOpen(true)}>
             Adjust Targets
+          </button>
+          <button className="primary-btn secondary" onClick={() => { setCashEdits({}); setIsCashModalOpen(true); }}>
+            💰 Edit Cash
           </button>
           <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -569,7 +627,7 @@ export default function App() {
                     <div style={{ marginTop: '1rem', textAlign: 'left' }}>
                       {usStocksData.map((e, index) => (
                          <div key={e.name} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
-                           <span style={{ color: PIE_COLORS[index % PIE_COLORS.length], fontWeight: 600 }}>● {e.name.replace('USD Stock', '').trim().replace(/^[-:]\s*/, '') || 'General US Equity'}</span>
+                           <span style={{ color: PIE_COLORS[index % PIE_COLORS.length], fontWeight: 600 }}>● {e.name}</span>
                            <span>${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                          </div>
                       ))}
@@ -593,7 +651,7 @@ export default function App() {
                     <div style={{ marginTop: '1rem', textAlign: 'left' }}>
                       {twStocksData.map((e, index) => (
                          <div key={e.name} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
-                           <span style={{ color: PIE_COLORS[(index + 4) % PIE_COLORS.length], fontWeight: 600 }}>● {e.name.replace('NTD Stock', '').trim().replace(/^[-:]\s*/, '') || 'General TW Equity'}</span>
+                           <span style={{ color: PIE_COLORS[(index + 4) % PIE_COLORS.length], fontWeight: 600 }}>● {e.name}</span>
                            <span>NT${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
                          </div>
                       ))}
@@ -718,6 +776,50 @@ export default function App() {
                 style={{ opacity: totalTarget === 100 ? 1 : 0.5, cursor: totalTarget === 100 ? 'pointer' : 'not-allowed' }}
               >
                 Save Targets
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      {/* EDIT CASH / ACCOUNTS MODAL */}
+      <div className={`modal-overlay ${isCashModalOpen ? 'active' : ''}`}>
+        <div className="modal-content">
+          <h2 style={{ marginBottom: '1.25rem', color: '#0f172a' }}>💰 Edit Cash & Account Balances</h2>
+          <form onSubmit={handleSaveAllCash}>
+            <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+              {cashAccounts.map(acct => {
+                const isNtd = acct.category.startsWith('NTD');
+                const isLoan = acct.category === 'Loan';
+                const currentVal = isNtd ? (Number(acct.ntdValue) || 0) : (Number(acct.usdValue) || 0);
+                const symbol = isNtd ? 'NT$' : '$';
+                return (
+                  <div key={acct.ticker} className="form-group" style={{ marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                      <label style={{ margin: 0, fontWeight: 600, color: isLoan ? '#ef4444' : '#334155', fontSize: '0.9rem' }}>
+                        {isLoan ? '🔴' : '🏦'} {acct.ticker}
+                        <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: '0.5rem', fontSize: '0.8rem' }}>({acct.category})</span>
+                      </label>
+                      <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#64748b' }}>
+                        Current: {symbol}{Math.abs(currentVal).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      className="form-control"
+                      placeholder={`New balance in ${isNtd ? 'NTD' : 'USD'}`}
+                      value={cashEdits[acct.ticker] ?? ''}
+                      onChange={e => setCashEdits(prev => ({...prev, [acct.ticker]: e.target.value}))}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.75rem' }}>Leave blank to keep current value. Only changed fields will be updated.</p>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setIsCashModalOpen(false)}>Cancel</button>
+              <button type="submit" className="primary-btn" disabled={isSaving || Object.keys(cashEdits).filter(k => cashEdits[k] !== '').length === 0}>
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </form>

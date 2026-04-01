@@ -1,26 +1,54 @@
-// This is the updated Google Apps Script backend for the Wealth Allocator
+// Wealth Allocator - Google Apps Script Backend
 
 function doGet(e) {
   const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-  const overviewSheet = spreadsheet.getSheetByName('OVERVIEW');
   const txSheet = spreadsheet.getSheetByName('Transactions');
+  const portfolioSheet = spreadsheet.getSheetByName('Portfolio');
   
-  if(!overviewSheet) {
-    return ContentService.createTextOutput(JSON.stringify({ error: "Sheet OVERVIEW not found" })).setMimeType(ContentService.MimeType.JSON);
+  // Read Portfolio sheet (individual holdings)
+  let portfolio = [];
+  if (portfolioSheet) {
+    const lastRow = portfolioSheet.getLastRow();
+    if (lastRow >= 2) {
+      const rawData = portfolioSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+      portfolio = rawData
+        .filter(row => row[0] !== '')
+        .map(row => ({
+          category: row[0],   // e.g. "USD Stock", "NTD Cash", "Loan"
+          ticker: row[1],     // e.g. "AAPL", "Firstrade", "NTD Loan"
+          qty: row[2],        // shares or blank for cash
+          usdValue: row[3],   // computed by GOOGLEFINANCE formula or static
+          ntdValue: row[4],   // computed or static
+        }));
+    }
   }
-  
-  // Dynamically get all rows in OVERVIEW starting from Row 3
-  const lastRow = overviewSheet.getLastRow();
+
+  // Build OVERVIEW summary from portfolio data
+  const categories = ['USD Cash', 'USD Preferred', 'USD Stock', 'NTD Cash', 'NTD Preferred', 'NTD Stock', 'Loan'];
   let overviewData = [];
-  if (lastRow >= 3) {
-    const rawData = overviewSheet.getRange(3, 2, lastRow - 2, 4).getValues();
-    overviewData = rawData.map(row => ({
-      category: row[0],
-      currentUsd: row[1],
-      currentNtd: row[2],
-      percentage: row[3] * 100, // convert decimal to percentage
-    })).filter(r => r.category !== ""); // filter out empty rows
+  let totalUsd = 0;
+
+  for (const cat of categories) {
+    const items = portfolio.filter(p => p.category === cat);
+    const sumUsd = items.reduce((s, i) => s + (Number(i.usdValue) || 0), 0);
+    const sumNtd = items.reduce((s, i) => s + (Number(i.ntdValue) || 0), 0);
+    if (cat !== 'Loan') totalUsd += sumUsd;
+    overviewData.push({
+      category: cat,
+      currentUsd: sumUsd,
+      currentNtd: sumNtd,
+      percentage: 0, // will be computed below
+    });
+  }
+
+  // Compute percentages (exclude Loan from total for percentage calc)
+  if (totalUsd > 0) {
+    for (let item of overviewData) {
+      if (item.category !== 'Loan') {
+        item.percentage = (item.currentUsd / totalUsd) * 100;
+      }
+    }
   }
 
   // Fetch Transactions for historical chart
@@ -28,7 +56,7 @@ function doGet(e) {
   if (txSheet) {
     const txLastRow = txSheet.getLastRow();
     if (txLastRow >= 2) {
-      const rawTx = txSheet.getRange(2, 1, txLastRow - 1, 3).getValues(); // Date, Category, Amount
+      const rawTx = txSheet.getRange(2, 1, txLastRow - 1, 3).getValues();
       txData = rawTx.map(row => ({
         date: row[0],
         category: row[1],
@@ -40,6 +68,7 @@ function doGet(e) {
   return ContentService.createTextOutput(JSON.stringify({
     status: 'success',
     data: overviewData,
+    portfolio: portfolio,
     transactions: txData
   })).setMimeType(ContentService.MimeType.JSON);
 }
@@ -55,7 +84,120 @@ function doPost(e) {
   const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   
-  // Custom script injection to load historical tx payload
+  // ===== INIT PORTFOLIO: One-time bulk load with GOOGLEFINANCE formulas =====
+  if (requestData.action === 'init_portfolio') {
+    let sheet = spreadsheet.getSheetByName('Portfolio');
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet('Portfolio');
+    } else {
+      sheet.clear();
+    }
+    
+    // Header row
+    sheet.getRange(1, 1, 1, 5).setValues([['Category', 'Ticker', 'Qty', 'USD Value', 'NTD Value']]);
+    // Bold header
+    sheet.getRange(1, 1, 1, 5).setFontWeight('bold');
+    
+    const rows = requestData.data;
+    if (rows && rows.length > 0) {
+      // We need to detect formula strings (starting with '=') and use setFormulas for those cells
+      const range = sheet.getRange(2, 1, rows.length, 5);
+      
+      // First set all values
+      const cleanRows = rows.map(row => row.map(cell => {
+        if (typeof cell === 'string' && cell.startsWith('=')) return ''; // placeholder
+        return cell;
+      }));
+      range.setValues(cleanRows);
+      
+      // Then set individual formula cells
+      for (let r = 0; r < rows.length; r++) {
+        for (let c = 0; c < 5; c++) {
+          const cell = rows[r][c];
+          if (typeof cell === 'string' && cell.startsWith('=')) {
+            sheet.getRange(2 + r, 1 + c).setFormula(cell);
+          }
+        }
+      }
+    }
+    
+    // Auto-resize columns
+    for (let i = 1; i <= 5; i++) sheet.autoResizeColumn(i);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: `Portfolio initialized with ${rows ? rows.length : 0} rows!`
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // ===== UPDATE CASH: Update a specific cash/preferred/debt account amount =====
+  if (requestData.action === 'update_cash') {
+    const { ticker, amount, currency } = requestData; // ticker = account name, amount = new balance
+    let sheet = spreadsheet.getSheetByName('Portfolio');
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({ error: "Portfolio sheet not found" })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    const lastRow = sheet.getLastRow();
+    const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    
+    let found = false;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][1] === ticker) { // match by ticker/account name
+        found = true;
+        const rowIdx = i + 2;
+        if (currency === 'USD' || data[i][0].startsWith('USD')) {
+          sheet.getRange(rowIdx, 4).setValue(Number(amount));       // USD Value
+          sheet.getRange(rowIdx, 5).setFormula(`=D${rowIdx}*32`);   // NTD Value
+        } else {
+          sheet.getRange(rowIdx, 5).setValue(Number(amount));       // NTD Value
+          sheet.getRange(rowIdx, 4).setFormula(`=E${rowIdx}/32`);   // USD Value
+        }
+        break;
+      }
+    }
+    
+    if (!found) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: `Account "${ticker}" not found in Portfolio sheet`
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: `Updated ${ticker} to ${amount}`
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // ===== ADD STOCK: Add a new stock holding =====
+  if (requestData.action === 'add_stock') {
+    const { category, ticker, qty } = requestData;
+    let sheet = spreadsheet.getSheetByName('Portfolio');
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({ error: "Portfolio sheet not found" })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    const newRow = sheet.getLastRow() + 1;
+    sheet.getRange(newRow, 1).setValue(category);
+    sheet.getRange(newRow, 2).setValue(ticker);
+    sheet.getRange(newRow, 3).setValue(Number(qty));
+    
+    if (category === 'USD Stock') {
+      sheet.getRange(newRow, 4).setFormula(`=${qty}*GOOGLEFINANCE("${ticker}","price")`);
+      sheet.getRange(newRow, 5).setFormula(`=D${newRow}*32`);
+    } else if (category === 'NTD Stock') {
+      sheet.getRange(newRow, 5).setFormula(`=${qty}*GOOGLEFINANCE("TPE:${ticker}","price")`);
+      sheet.getRange(newRow, 4).setFormula(`=E${newRow}/32`);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: `Added ${qty} shares of ${ticker} as ${category}`
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ===== LEGACY: Bulk load historical transactions =====
   if (requestData.action === 'bulk_tx') {
     let txSheet = spreadsheet.getSheetByName('Transactions');
     if (!txSheet) {
@@ -63,7 +205,7 @@ function doPost(e) {
       txSheet.appendRow(['Date', 'Category', 'Amount']);
     }
     
-    const rows = requestData.data; // Expected: [[Date, Category, Amount], ...]
+    const rows = requestData.data;
     if(rows && rows.length > 0) {
       txSheet.getRange(txSheet.getLastRow() + 1, 1, rows.length, 3).setValues(rows);
     }
@@ -73,33 +215,8 @@ function doPost(e) {
       message: `Successfully loaded ${rows.length} historical transactions!`
     })).setMimeType(ContentService.MimeType.JSON);
   }
-
-  // Custom script injection to load initial live stocks with GOOGLEFINANCE
-  if (requestData.action === 'init_live_portfolio') {
-    let overview = spreadsheet.getSheetByName('OVERVIEW');
-    if (!overview) {
-      overview = spreadsheet.insertSheet('OVERVIEW');
-      overview.appendRow(["", "Category", "USD Amount", "NTD Amount", "Target %"]);
-    } else {
-      const lastRow = overview.getLastRow();
-      if (lastRow >= 3) {
-         overview.getRange(3, 1, lastRow - 2, 5).clearContent();
-      }
-    }
-    
-    const rows = requestData.data; 
-    if(rows && rows.length > 0) {
-      // Use setFormulas instead of setValues if we want to ensure formulas are parsed, 
-      // but setValues automatically parses strings starting with '=' in Google Sheets.
-      overview.getRange(3, 1, rows.length, 5).setValues(rows);
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({
-      status: 'success',
-      message: `Successfully initialized live portfolio!`
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
   
+  // ===== LEGACY: Single transaction update =====
   const { category, amount, date } = requestData;
   let txSheet = spreadsheet.getSheetByName('Transactions');
   if(!txSheet) {
@@ -108,39 +225,6 @@ function doPost(e) {
   }
   const insertDate = date ? new Date(date) : new Date();
   txSheet.appendRow([insertDate, category, amount]);
-  
-  // Dynamically update the OVERVIEW sheet actuals
-  let overview = spreadsheet.getSheetByName('OVERVIEW');
-  if (overview) {
-    let rawData;
-    const numRows = Math.max(0, overview.getLastRow() - 2);
-    if(numRows > 0) {
-      rawData = overview.getRange(3, 2, numRows, 4).getValues();
-      let found = false;
-      for (let i = 0; i < rawData.length; i++) {
-        if (rawData[i][0] === category) {
-          found = true;
-          const isUsd = category.startsWith('USD');
-          if (isUsd) {
-             let oldUsd = Number(rawData[i][1]) || 0;
-             overview.getRange(3 + i, 3).setValue(oldUsd + Number(amount));
-             overview.getRange(3 + i, 4).setValue((oldUsd + Number(amount)) * 32); 
-          } else {
-             let oldNtd = Number(rawData[i][2]) || 0;
-             overview.getRange(3 + i, 4).setValue(oldNtd + Number(amount));
-             overview.getRange(3 + i, 3).setValue((oldNtd + Number(amount)) / 32);
-          }
-          break;
-        }
-      }
-      
-      if (!found) {
-        overview.appendRow(["", category, category.startsWith('USD') ? amount : amount/32, category.startsWith('USD') ? amount*32 : amount, 0.0]);
-      }
-    } else {
-      overview.appendRow(["", category, category.startsWith('USD') ? amount : amount/32, category.startsWith('USD') ? amount*32 : amount, 0.0]);
-    }
-  }
 
   return ContentService.createTextOutput(JSON.stringify({
     status: 'success',
