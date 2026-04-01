@@ -51,7 +51,48 @@ function doGet(e) {
     }
   }
 
-  // Fetch Transactions for historical chart
+  // Compute debt total
+  const loanItem = overviewData.find(d => d.category === 'Loan');
+  const totalDebtUsd = Math.abs(loanItem ? loanItem.currentUsd : 0);
+  const totalNetUsd = totalUsd - totalDebtUsd;
+
+  // ===== DAILY SNAPSHOT: Record to History sheet (once per day) =====
+  let historySheet = spreadsheet.getSheetByName('History');
+  if (!historySheet) {
+    historySheet = spreadsheet.insertSheet('History');
+    historySheet.appendRow(['Date', 'Gross Equity (USD)', 'Debt (USD)', 'Net Equity (USD)']);
+    historySheet.getRange(1, 1, 1, 4).setFontWeight('bold');
+  }
+  
+  const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  const histLastRow = historySheet.getLastRow();
+  let alreadyRecorded = false;
+  if (histLastRow >= 2) {
+    const lastDate = historySheet.getRange(histLastRow, 1).getValue();
+    if (lastDate && Utilities.formatDate(new Date(lastDate), Session.getScriptTimeZone(), 'yyyy-MM-dd') === today) {
+      alreadyRecorded = true;
+      // Update today's row with latest values
+      historySheet.getRange(histLastRow, 2, 1, 3).setValues([[Math.round(totalUsd * 100) / 100, Math.round(totalDebtUsd * 100) / 100, Math.round(totalNetUsd * 100) / 100]]);
+    }
+  }
+  if (!alreadyRecorded && totalUsd > 0) {
+    historySheet.appendRow([new Date(), Math.round(totalUsd * 100) / 100, Math.round(totalDebtUsd * 100) / 100, Math.round(totalNetUsd * 100) / 100]);
+  }
+
+  // Read History sheet for frontend chart
+  let historyData = [];
+  const histRows = historySheet.getLastRow();
+  if (histRows >= 2) {
+    const rawHist = historySheet.getRange(2, 1, histRows - 1, 4).getValues();
+    historyData = rawHist.filter(r => r[0]).map(row => ({
+      date: row[0],
+      gross: row[1],
+      debt: row[2],
+      net: row[3]
+    }));
+  }
+
+  // Fetch Transactions for legacy chart
   let txData = [];
   if (txSheet) {
     const txLastRow = txSheet.getLastRow();
@@ -69,6 +110,7 @@ function doGet(e) {
     status: 'success',
     data: overviewData,
     portfolio: portfolio,
+    history: historyData,
     transactions: txData
   })).setMimeType(ContentService.MimeType.JSON);
 }
@@ -127,6 +169,35 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success',
       message: `Portfolio initialized with ${rows ? rows.length : 0} rows!`
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // ===== INIT HISTORY: Bulk load historical gross/debt/net data =====
+  if (requestData.action === 'init_history') {
+    let histSheet = spreadsheet.getSheetByName('History');
+    if (!histSheet) {
+      histSheet = spreadsheet.insertSheet('History');
+    } else {
+      histSheet.clear();
+    }
+    
+    histSheet.getRange(1, 1, 1, 4).setValues([['Date', 'Gross Equity (USD)', 'Debt (USD)', 'Net Equity (USD)']]);
+    histSheet.getRange(1, 1, 1, 4).setFontWeight('bold');
+    
+    const rows = requestData.data;
+    if (rows && rows.length > 0) {
+      // Convert date strings to Date objects
+      const formattedRows = rows.map(r => [new Date(r[0]), r[1], r[2], r[3]]);
+      histSheet.getRange(2, 1, formattedRows.length, 4).setValues(formattedRows);
+      // Format date column
+      histSheet.getRange(2, 1, formattedRows.length, 1).setNumberFormat('yyyy-mm-dd');
+    }
+    
+    for (let i = 1; i <= 4; i++) histSheet.autoResizeColumn(i);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: `History initialized with ${rows ? rows.length : 0} rows!`
     })).setMimeType(ContentService.MimeType.JSON);
   }
   

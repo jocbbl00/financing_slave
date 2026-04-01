@@ -12,6 +12,7 @@ const CURRENCY_SYMBOLS = { USD: '$', NTD: 'NT$', JPY: '¥' };
 export default function App() {
   const [portfolio, setPortfolio] = useState([]);       // OVERVIEW-level 6-category summary
   const [portfolioItems, setPortfolioItems] = useState([]); // Individual stock/cash/debt rows
+  const [historyData, setHistoryData] = useState([]);    // Historical gross/debt/net snapshots
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -56,6 +57,11 @@ export default function App() {
       // Individual portfolio rows (stocks with tickers, cash accounts, debt)
       if (json.portfolio) {
         setPortfolioItems(json.portfolio);
+      }
+
+      // Historical snapshots for chart
+      if (json.history) {
+        setHistoryData(json.history);
       }
 
       if (json.transactions) {
@@ -117,44 +123,17 @@ export default function App() {
     fill: a.amount < 0 ? '#ef4444' : undefined // Custom fill hook for later versions, defaulting via pie mapping below
   }));
 
-  // Build Historical Chart Data from Transactions
-  // We use the historical deltas to build the trend curve shape, then anchor it to explicitly match the current Gross Equity.
-  const chartMap = {};
-  let rollingValue = 0;
-  
-  // Sorting chronologically
-  const sortedTx = [...transactions].sort((a,b) => new Date(a.date) - new Date(b.date));
-  
-  sortedTx.forEach(tx => {
-    if (tx.category === 'USD Historical Delta') {
-      const d = new Date(tx.date);
-      const key = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`; // YYYY-MM
-      
-      const txAmountUsd = tx.category.startsWith('USD') ? Number(tx.amount) : Number(tx.amount) / 32;
-      rollingValue += txAmountUsd;
-      
-      chartMap[key] = rollingValue;
-    }
+  // Build Historical Chart Data from History sheet snapshots
+  const historicalChartData = historyData.map(h => {
+    const d = new Date(h.date);
+    const label = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`;
+    return {
+      name: label,
+      gross: Math.round((h.gross || 0) * FX_RATES[currency]),
+      net: Math.round((h.net || 0) * FX_RATES[currency]),
+      debt: Math.round((h.debt || 0) * FX_RATES[currency]),
+    };
   });
-
-  const keys = Object.keys(chartMap);
-  const lastKey = keys[keys.length - 1];
-  const lastVal = lastKey ? chartMap[lastKey] : 0;
-  const offset = totalUsdGross - lastVal;
-
-  const historicalChartData = keys.map(dateLabel => ({
-    name: dateLabel,
-    equity: Math.round((chartMap[dateLabel] + offset) * FX_RATES[currency])
-  }));
-
-  // Ensure current month is plotted if it's missing from the history array
-  const currentKey = `${new Date().getFullYear()}-${(new Date().getMonth()+1).toString().padStart(2, '0')}`;
-  if (keys.length > 0 && lastKey !== currentKey) {
-     historicalChartData.push({
-        name: currentKey,
-        equity: Math.round(totalUsdGross * FX_RATES[currency])
-     });
-  }
 
   let displayChartData = historicalChartData;
   if (timeFilter === '6M') {
@@ -420,7 +399,7 @@ export default function App() {
         
         <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontWeight: 600 }}>Historical Gross Equity Trend ({currency})</h2>
+            <h2 style={{ fontWeight: 600 }}>Equity History ({currency})</h2>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {['6M', '1Y', 'All'].map(tf => (
                 <button 
@@ -443,20 +422,22 @@ export default function App() {
             </div>
           </div>
           {displayChartData.length > 0 ? (
-             <div style={{ width: '100%', height: '250px' }}>
+             <div style={{ width: '100%', height: '280px' }}>
                 <ResponsiveContainer>
                   <LineChart data={displayChartData}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="name" stroke="#64748b" />
                     <YAxis stroke="#64748b" />
-                    <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                    <Tooltip contentStyle={{ borderRadius: '12px' }} formatter={(val) => `${CURRENCY_SYMBOLS[currency]}${val.toLocaleString()}`} />
                     <Legend />
-                    <Line type="monotone" dataKey="equity" name={`Gross Equity (${currency})`} stroke="#f59e0b" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="gross" name={`Gross Assets (${currency})`} stroke="#f59e0b" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                    <Line type="monotone" dataKey="net" name={`Net Equity (${currency})`} stroke="#10b981" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                    <Line type="monotone" dataKey="debt" name={`Debt (${currency})`} stroke="#ef4444" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 2 }} />
                   </LineChart>
                 </ResponsiveContainer>
              </div>
           ) : (
-            <p style={{ color: '#475569' }}>No historical transactions populated from the spreadsheet yet.</p>
+            <p style={{ color: '#475569' }}>No historical data yet. It will appear once portfolio snapshots are recorded.</p>
           )}
         </div>
       </div>
