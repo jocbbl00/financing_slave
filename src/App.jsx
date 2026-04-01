@@ -9,6 +9,23 @@ const PIE_COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#0ea
 const FX_RATES = { USD: 1, NTD: 32, JPY: 150 };
 const CURRENCY_SYMBOLS = { USD: '$', NTD: 'NT$', JPY: '¥' };
 
+// Friendly ticker name mappings
+const TICKER_NAMES = {
+  // US Stocks
+  'AAPL': 'Apple', 'ABAT': 'ABAT', 'AMD': 'AMD', 'AMZN': 'Amazon',
+  'EBAY': 'eBay', 'EVGO': 'EVgo', 'GLW': 'Corning', 'GOOGL': 'Google',
+  'LAC': 'Lithium Americas', 'LAAC': 'Lithium Argentina', 'LEU': 'Centrus',
+  'META': 'Meta', 'MSFT': 'Microsoft', 'NEE': 'NextEra', 'NVDA': 'NVIDIA',
+  'PLTR': 'Palantir', 'PLUG': 'Plug Power', 'TSLA': 'Tesla', 'VRT': 'Vertiv',
+  // Taiwan Stocks
+  '2330': 'TSMC', '2890': 'SinoPac',
+  '00687B': 'CTBC Bond ETF', '00719B': 'Yuanta Bond ETF',
+};
+const tickerLabel = (ticker) => {
+  const name = TICKER_NAMES[ticker];
+  return name ? `${name}(${ticker})` : ticker;
+};
+
 export default function App() {
   const [portfolio, setPortfolio] = useState([]);       // OVERVIEW-level 6-category summary
   const [portfolioItems, setPortfolioItems] = useState([]); // Individual stock/cash/debt rows
@@ -18,7 +35,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({ us: true, tw: true });
+  const [expandedSections, setExpandedSections] = useState({ us: true, tw: true, history: true, distribution: true, allocation: true });
   const [timeFilter, setTimeFilter] = useState('All');
   const [currency, setCurrency] = useState('USD');
   const [activeTab, setActiveTab] = useState('Overview');
@@ -259,11 +276,11 @@ export default function App() {
   // Build pie chart data from individual portfolio items (using tickers)
   const usStocksData = portfolioItems
       .filter(a => a.category === 'USD Stock' && (Number(a.usdValue) || 0) > 0)
-      .map(a => ({ name: a.ticker, value: Number(a.usdValue) || 0 }));
+      .map(a => ({ name: tickerLabel(a.ticker), value: Number(a.usdValue) || 0 }));
 
   const twStocksData = portfolioItems
       .filter(a => a.category === 'NTD Stock' && (Number(a.ntdValue) || 0) > 0)
-      .map(a => ({ name: a.ticker, value: Number(a.ntdValue) || 0 }));
+      .map(a => ({ name: tickerLabel(a.ticker), value: Number(a.ntdValue) || 0 }));
 
   // Cash accounts for the edit modal
   const cashAccounts = portfolioItems.filter(a => 
@@ -438,10 +455,13 @@ export default function App() {
           <div className="stat-value" style={{ color: '#ef4444' }}>{fmt(totalUsdDebt)}</div>
         </div>
         
-        <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontWeight: 600 }}>Equity History ({currency})</h2>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: expandedSections.history ? '300px' : 'auto' }}>
+          <div onClick={() => setExpandedSections(p => ({...p, history: !p.history}))} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: expandedSections.history ? '1rem' : 0, cursor: 'pointer' }}>
+            <h2 style={{ fontWeight: 600, margin: 0 }}>Equity History ({currency})</h2>
+            <span style={{ fontSize: '1.2rem', transition: 'transform 0.2s', transform: expandedSections.history ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+          </div>
+          {expandedSections.history && (<>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
               {['6M', '1Y', 'All'].map(tf => (
                 <button 
                   key={tf}
@@ -461,7 +481,6 @@ export default function App() {
                 </button>
               ))}
             </div>
-          </div>
           {displayChartData.length > 0 ? (
              <div style={{ width: '100%', height: '280px' }}>
                 <ResponsiveContainer>
@@ -480,12 +499,17 @@ export default function App() {
           ) : (
             <p style={{ color: '#475569' }}>No historical data yet. It will appear once portfolio snapshots are recorded.</p>
           )}
+          </>)}
         </div>
       </div>
 
       <div className="dashboard-grid">
         <div className="glass-card">
-          <h2 style={{ marginBottom: '1rem', fontWeight: 600 }}>Total Value Distribution</h2>
+          <div onClick={() => setExpandedSections(p => ({...p, distribution: !p.distribution}))} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: expandedSections.distribution ? '1rem' : 0 }}>
+            <h2 style={{ fontWeight: 600, margin: 0 }}>Total Value Distribution</h2>
+            <span style={{ fontSize: '1.2rem', transition: 'transform 0.2s', transform: expandedSections.distribution ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+          </div>
+          {expandedSections.distribution && (
           <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
             <div style={{ flex: '1 1 200px', minHeight: '250px' }}>
               <ResponsiveContainer width="100%" height={250}>
@@ -520,14 +544,16 @@ export default function App() {
               ))}
             </div>
           </div>
+          )}
         </div>
 
         {/* Allocation List Card */}
         <div className="glass-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontWeight: 600 }}>Asset Allocation</h2>
-            <span style={{ fontSize: '0.9rem', color: '#475569' }}>Comparing to Targets</span>
+          <div onClick={() => setExpandedSections(p => ({...p, allocation: !p.allocation}))} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: expandedSections.allocation ? '1.5rem' : 0 }}>
+            <h2 style={{ fontWeight: 600, margin: 0 }}>Asset Allocation</h2>
+            <span style={{ fontSize: '1.2rem', transition: 'transform 0.2s', transform: expandedSections.allocation ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
           </div>
+          {expandedSections.allocation && (<>
           
           <div style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '1rem' }}>
             {enrichedPortfolio.map((asset) => (
@@ -558,6 +584,7 @@ export default function App() {
                </div>
             ))}
           </div>
+          </>)}
         </div>
       </div>
       </>
