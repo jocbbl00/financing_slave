@@ -422,14 +422,15 @@ export default function App() {
       {activeTab === 'Overview' && (
       <>
       <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
-        <div className="glass-card stat-card">
+        <div className="glass-card stat-card" style={{ borderTop: '4px solid #10b981' }}>
           <div className="stat-label">Net Equity</div>
-          <div className="stat-value">{fmt(totalUsdNet)}</div>
+          <div className="stat-value" style={{ color: '#059669' }}>{fmt(totalUsdNet)}</div>
         </div>
 
         <div className="glass-card stat-card">
-          <div className="stat-label">Gross Assets</div>
+          <div className="stat-label">Total Assets</div>
           <div className="stat-value">{fmt(totalUsdGross)}</div>
+          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>= Equity + Debt</div>
         </div>
         
         <div className="glass-card stat-card" style={{ borderTop: '4px solid #ef4444' }}>
