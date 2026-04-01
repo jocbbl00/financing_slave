@@ -73,6 +73,32 @@ function doPost(e) {
       message: `Successfully loaded ${rows.length} historical transactions!`
     })).setMimeType(ContentService.MimeType.JSON);
   }
+
+  // Custom script injection to load initial live stocks with GOOGLEFINANCE
+  if (requestData.action === 'init_live_portfolio') {
+    let overview = spreadsheet.getSheetByName('OVERVIEW');
+    if (!overview) {
+      overview = spreadsheet.insertSheet('OVERVIEW');
+      overview.appendRow(["", "Category", "USD Amount", "NTD Amount", "Target %"]);
+    } else {
+      const lastRow = overview.getLastRow();
+      if (lastRow >= 3) {
+         overview.getRange(3, 1, lastRow - 2, 5).clearContent();
+      }
+    }
+    
+    const rows = requestData.data; 
+    if(rows && rows.length > 0) {
+      // Use setFormulas instead of setValues if we want to ensure formulas are parsed, 
+      // but setValues automatically parses strings starting with '=' in Google Sheets.
+      overview.getRange(3, 1, rows.length, 5).setValues(rows);
+    }
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: `Successfully initialized live portfolio!`
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
   
   const { category, amount, date } = requestData;
   let txSheet = spreadsheet.getSheetByName('Transactions');
