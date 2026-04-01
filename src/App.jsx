@@ -109,10 +109,9 @@ export default function App() {
   }));
 
   // Build Historical Chart Data from Transactions
-  // We will group transactions by Year-Month to generate a growth line.
-  // We assume transactions track delta changes.
+  // Group transactions by Year-Month to generate a gross equity line.
   const chartMap = {};
-  let rollingNetWorth = 0;
+  const categoryBalances = {};
   // Sorting chronologically
   const sortedTx = [...transactions].sort((a,b) => new Date(a.date) - new Date(b.date));
   
@@ -120,16 +119,22 @@ export default function App() {
     const d = new Date(tx.date);
     const key = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`; // YYYY-MM
     
-    // Normalize logic for mock chart
-    const txAmountUsd = tx.category.startsWith('USD') ? Number(tx.amount) : Number(tx.amount) / 32;
-    rollingNetWorth += txAmountUsd;
+    if (!categoryBalances[tx.category]) categoryBalances[tx.category] = 0;
+    categoryBalances[tx.category] += Number(tx.amount);
     
-    chartMap[key] = rollingNetWorth;
+    let currentGrossUsd = 0;
+    for (const [cat, bal] of Object.entries(categoryBalances)) {
+      if (bal > 0) {
+        currentGrossUsd += cat.startsWith('USD') ? bal : bal / 32;
+      }
+    }
+    
+    chartMap[key] = currentGrossUsd;
   });
 
-  const historicalChartData = Object.entries(chartMap).map(([dateLabel, netWorthUsd]) => ({
+  const historicalChartData = Object.entries(chartMap).map(([dateLabel, grossUsd]) => ({
     name: dateLabel,
-    netWorth: Math.round(netWorthUsd)
+    equity: Math.round(grossUsd * FX_RATES[currency])
   }));
 
   let displayChartData = historicalChartData;
@@ -297,7 +302,7 @@ export default function App() {
         
         <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 style={{ fontWeight: 600 }}>Historical Net Equity Trend (USD)</h2>
+            <h2 style={{ fontWeight: 600 }}>Historical Gross Equity Trend ({currency})</h2>
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               {['6M', '1Y', 'All'].map(tf => (
                 <button 
@@ -328,7 +333,7 @@ export default function App() {
                     <YAxis stroke="#64748b" />
                     <Tooltip contentStyle={{ borderRadius: '12px' }} />
                     <Legend />
-                    <Line type="monotone" dataKey="netWorth" name="Net Worth (USD)" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="equity" name={`Gross Equity (${currency})`} stroke="#f59e0b" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
              </div>
