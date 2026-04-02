@@ -35,7 +35,7 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({ us: true, tw: true, history: true, distribution: true, allocation: true });
+  const [poppedCard, setPoppedCard] = useState(null);
   const [timeFilter, setTimeFilter] = useState('All');
   const [currency, setCurrency] = useState('USD');
   const [activeTab, setActiveTab] = useState('Overview');
@@ -370,6 +370,7 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {poppedCard && <div className="popped-out-backdrop" onClick={() => setPoppedCard(null)}></div>}
       <header>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <img src="/favicon.jpg" alt="icon" style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} />
@@ -441,26 +442,26 @@ export default function App() {
       <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
         <div className="glass-card stat-card" style={{ borderTop: '4px solid #10b981' }}>
           <div className="stat-label">Net Equity</div>
-          <div className="stat-value" style={{ color: '#059669' }}>{fmt(totalUsdNet)}</div>
+          <div className="stat-value" style={{ color: '#059669' }}>{fmt(historyData.length > 0 ? historyData[historyData.length - 1].net : totalUsdNet)}</div>
         </div>
 
         <div className="glass-card stat-card">
           <div className="stat-label">Total Assets</div>
-          <div className="stat-value">{fmt(totalUsdGross)}</div>
+          <div className="stat-value">{fmt(historyData.length > 0 ? historyData[historyData.length - 1].gross : totalUsdGross)}</div>
           <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>= Equity + Debt</div>
         </div>
         
         <div className="glass-card stat-card" style={{ borderTop: '4px solid #ef4444' }}>
           <div className="stat-label">Remaining Debt</div>
-          <div className="stat-value" style={{ color: '#ef4444' }}>{fmt(totalUsdDebt)}</div>
+          <div className="stat-value" style={{ color: '#ef4444' }}>{fmt(historyData.length > 0 ? historyData[historyData.length - 1].debt : totalUsdDebt)}</div>
         </div>
         
-        <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: expandedSections.history ? '300px' : 'auto' }}>
-          <div onClick={() => setExpandedSections(p => ({...p, history: !p.history}))} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: expandedSections.history ? '1rem' : 0, cursor: 'pointer' }}>
+        <div className={`glass-card insight-card ${poppedCard === 'history' ? 'popped-out' : ''}`} style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
+          <div onClick={() => setPoppedCard(p => p === 'history' ? null : 'history')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', cursor: 'pointer' }}>
             <h2 style={{ fontWeight: 600, margin: 0 }}>Equity History ({currency})</h2>
-            <span style={{ fontSize: '1.2rem', transition: 'transform 0.2s', transform: expandedSections.history ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+            <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'history' ? '✕' : '⤢'}</span>
           </div>
-          {expandedSections.history && (<>
+          
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
               {['6M', '1Y', 'All'].map(tf => (
                 <button 
@@ -482,7 +483,7 @@ export default function App() {
               ))}
             </div>
           {displayChartData.length > 0 ? (
-             <div style={{ width: '100%', height: '280px' }}>
+             <div style={{ width: '100%', height: poppedCard === 'history' ? '70vh' : '280px' }}>
                 <ResponsiveContainer>
                   <LineChart data={displayChartData}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -499,20 +500,20 @@ export default function App() {
           ) : (
             <p style={{ color: '#475569' }}>No historical data yet. It will appear once portfolio snapshots are recorded.</p>
           )}
-          </>)}
+          
         </div>
       </div>
 
       <div className="dashboard-grid">
-        <div className="glass-card">
-          <div onClick={() => setExpandedSections(p => ({...p, distribution: !p.distribution}))} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: expandedSections.distribution ? '1rem' : 0 }}>
+        <div className={`glass-card ${poppedCard === 'distribution' ? 'popped-out' : ''}`}>
+          <div onClick={() => setPoppedCard(p => p === 'distribution' ? null : 'distribution')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
             <h2 style={{ fontWeight: 600, margin: 0 }}>Total Value Distribution</h2>
-            <span style={{ fontSize: '1.2rem', transition: 'transform 0.2s', transform: expandedSections.distribution ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+            <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'distribution' ? '✕' : '⤢'}</span>
           </div>
-          {expandedSections.distribution && (
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
-            <div style={{ flex: '1 1 200px', minHeight: '250px' }}>
-              <ResponsiveContainer width="100%" height={250}>
+          
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'distribution' ? 'column' : 'row' }}>
+            <div style={{ flex: '1 1 200px', minHeight: poppedCard === 'distribution' ? '500px' : '250px', width: '100%' }}>
+              <ResponsiveContainer width="100%" height={poppedCard === 'distribution' ? 500 : 250}>
                 <PieChart>
                   <Pie 
                     data={pieData} 
@@ -544,18 +545,18 @@ export default function App() {
               ))}
             </div>
           </div>
-          )}
+          
         </div>
 
         {/* Allocation List Card */}
-        <div className="glass-card">
-          <div onClick={() => setExpandedSections(p => ({...p, allocation: !p.allocation}))} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: expandedSections.allocation ? '1.5rem' : 0 }}>
+        <div className={`glass-card ${poppedCard === 'allocation' ? 'popped-out' : ''}`}>
+          <div onClick={() => setPoppedCard(p => p === 'allocation' ? null : 'allocation')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1.5rem' }}>
             <h2 style={{ fontWeight: 600, margin: 0 }}>Asset Allocation</h2>
-            <span style={{ fontSize: '1.2rem', transition: 'transform 0.2s', transform: expandedSections.allocation ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+            <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'allocation' ? '✕' : '⤢'}</span>
           </div>
-          {expandedSections.allocation && (<>
           
-          <div style={{ maxHeight: '300px', overflowY: 'auto', paddingRight: '1rem' }}>
+          
+          <div style={{ maxHeight: poppedCard === 'allocation' ? 'none' : '300px', overflowY: 'auto', paddingRight: '1rem' }}>
             {enrichedPortfolio.map((asset) => (
                <div key={asset.category} className="allocation-item">
                  <div className="allocation-header">
@@ -584,7 +585,6 @@ export default function App() {
                </div>
             ))}
           </div>
-          </>)}
         </div>
       </div>
       </>
@@ -670,15 +670,15 @@ export default function App() {
             <h2 style={{ fontWeight: 600, marginBottom: '2rem' }}>📈 Equity Portfolio Breakdown</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
               
-              <div style={{ background: 'rgba(255,255,255,0.4)', padding: '1.5rem', borderRadius: '12px' }}>
-                <div onClick={() => setExpandedSections(p => ({...p, us: !p.us}))} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: expandedSections.us ? '1rem' : 0 }}>
+              <div className={poppedCard === 'us' ? 'popped-out glass-card' : ''} style={{ background: 'rgba(255,255,255,0.4)', padding: '1.5rem', borderRadius: '12px' }}>
+                <div onClick={() => setPoppedCard(p => p === 'us' ? null : 'us')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
                   <h3 style={{ color: '#3b82f6', margin: 0 }}>🇺🇸 US Stocks (USD) — ${usStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
-                  <span style={{ fontSize: '1.2rem', transition: 'transform 0.2s', transform: expandedSections.us ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+                  <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'us' ? '✕' : '⤢'}</span>
                 </div>
-                {expandedSections.us && (usStocksData.length > 0 ? (
+                {usStocksData.length > 0 ? (
                   <>
-                    <div style={{ textAlign: 'center' }}>
-                    <ResponsiveContainer width="100%" height={250}>
+                    <div style={{ textAlign: 'center', height: poppedCard === 'us' ? '60vh' : '250px' }}>
+                    <ResponsiveContainer width="100%" height={poppedCard === 'us' ? '100%' : 250}>
                       <PieChart>
                         <Pie data={usStocksData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={80} label={({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%`}>
                           {usStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
@@ -700,18 +700,18 @@ export default function App() {
                       })}
                     </div>
                   </>
-                ) : <p style={{ color: '#64748b' }}>No US Stocks logged.</p>)}
+                ) : <p style={{ color: '#64748b' }}>No US Stocks logged.</p>}
               </div>
 
-              <div style={{ background: 'rgba(255,255,255,0.4)', padding: '1.5rem', borderRadius: '12px' }}>
-                <div onClick={() => setExpandedSections(p => ({...p, tw: !p.tw}))} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: expandedSections.tw ? '1rem' : 0 }}>
+              <div className={poppedCard === 'tw' ? 'popped-out glass-card' : ''} style={{ background: 'rgba(255,255,255,0.4)', padding: '1.5rem', borderRadius: '12px' }}>
+                <div onClick={() => setPoppedCard(p => p === 'tw' ? null : 'tw')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
                   <h3 style={{ color: '#10b981', margin: 0 }}>🇹🇼 Taiwan Stocks (NTD) — NT${twStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
-                  <span style={{ fontSize: '1.2rem', transition: 'transform 0.2s', transform: expandedSections.tw ? 'rotate(180deg)' : 'rotate(0deg)' }}>▾</span>
+                  <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'tw' ? '✕' : '⤢'}</span>
                 </div>
-                {expandedSections.tw && (twStocksData.length > 0 ? (
+                {twStocksData.length > 0 ? (
                    <>
-                    <div style={{ textAlign: 'center' }}>
-                    <ResponsiveContainer width="100%" height={250}>
+                    <div style={{ textAlign: 'center', height: poppedCard === 'tw' ? '60vh' : '250px' }}>
+                    <ResponsiveContainer width="100%" height={poppedCard === 'tw' ? '100%' : 250}>
                       <PieChart>
                         <Pie data={twStocksData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={80} label={({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%`}>
                           {twStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[(index + 4) % PIE_COLORS.length]} />)}
@@ -733,7 +733,7 @@ export default function App() {
                       })}
                     </div>
                    </>
-                ) : <p style={{ color: '#64748b' }}>No Taiwan Stocks logged.</p>)}
+                ) : <p style={{ color: '#64748b' }}>No Taiwan Stocks logged.</p>}
               </div>
             </div>
           </div>
