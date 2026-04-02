@@ -497,7 +497,7 @@ export default function App() {
                     innerRadius={poppedCard === 'distribution' ? 100 : 50} 
                     outerRadius={poppedCard === 'distribution' ? 180 : 85} 
                     paddingAngle={4}
-                    label={poppedCard === 'distribution' ? ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%` : false}
+                    label={poppedCard === 'distribution' ? ({ name, percent }) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(0)}%` : '' : false}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill || PIE_COLORS[index % PIE_COLORS.length]} />
@@ -658,7 +658,7 @@ export default function App() {
                             innerRadius={poppedCard === 'us' ? 100 : 40} 
                             outerRadius={poppedCard === 'us' ? 180 : 80} 
                             paddingAngle={4}
-                            label={poppedCard === 'us' ? ({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%` : false}
+                            label={poppedCard === 'us' ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
                           >
                             {usStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                           </Pie>
@@ -703,7 +703,7 @@ export default function App() {
                             innerRadius={poppedCard === 'tw' ? 100 : 40} 
                             outerRadius={poppedCard === 'tw' ? 180 : 80} 
                             paddingAngle={4}
-                            label={poppedCard === 'tw' ? ({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%` : false}
+                            label={poppedCard === 'tw' ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
                           >
                             {twStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[(index + 4) % PIE_COLORS.length]} />)}
                           </Pie>
