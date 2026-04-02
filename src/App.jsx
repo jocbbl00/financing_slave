@@ -659,6 +659,9 @@ export default function App() {
                             outerRadius={poppedCard === 'us' ? 180 : 80} 
                             paddingAngle={4}
                             label={poppedCard === 'us' ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
+                            isAnimationActive={false}
+                            activeIndex={-1}
+                            activeShape={null}
                           >
                             {usStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                           </Pie>
@@ -704,6 +707,9 @@ export default function App() {
                             outerRadius={poppedCard === 'tw' ? 180 : 80} 
                             paddingAngle={4}
                             label={poppedCard === 'tw' ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
+                            isAnimationActive={false}
+                            activeIndex={-1}
+                            activeShape={null}
                           >
                             {twStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[(index + 4) % PIE_COLORS.length]} />)}
                           </Pie>

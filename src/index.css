@@ -429,8 +429,20 @@ header p {
   margin: 0 !important;
   transform: none !important;
   transition: none !important;
+  background: rgba(255, 255, 255, 0.95) !important;
 }
 
 .glass-card.popped-out:hover {
+  transform: none !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Prevent parent glass-card from shifting when a child is popped out */
+.glass-card:has(.popped-out) {
+  transform: none !important;
+  transition: none !important;
+}
+
+.glass-card:has(.popped-out):hover {
   transform: none !important;
 }
