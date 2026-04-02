@@ -285,13 +285,15 @@ function doPost(e) {
     const lastRow = sheet.getLastRow();
     let foundRow = -1;
     let newQty = mathQty;
+    let oldQty = 0;
 
     if (lastRow >= 2) {
       const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
       for (let i = 0; i < data.length; i++) {
         if (data[i][1] === ticker && data[i][0] === category) {
           foundRow = i + 2;
-          newQty = Number(data[i][2]) + mathQty;
+          oldQty = Number(data[i][2]);
+          newQty = oldQty + mathQty;
           break;
         }
       }
@@ -303,9 +305,19 @@ function doPost(e) {
       if (category === 'USD Stock') {
         sheet.getRange(foundRow, 4).setFormula(`=${newQty}*GOOGLEFINANCE("${ticker}","price")`);
         sheet.getRange(foundRow, 5).setFormula(`=D${foundRow}*32`);
+        if (type !== 'Sell' && Number(price) > 0 && newQty > 0) {
+          const oldCb = Number(sheet.getRange(foundRow, 6).getValue()) || 0;
+          const newCb = ((oldQty * oldCb) + (mathQty * Number(price))) / newQty;
+          sheet.getRange(foundRow, 6).setValue(newCb);
+        }
       } else if (category === 'NTD Stock') {
         sheet.getRange(foundRow, 5).setFormula(`=${newQty}*GOOGLEFINANCE("TPE:${ticker}","price")`);
         sheet.getRange(foundRow, 4).setFormula(`=E${foundRow}/32`);
+        if (type !== 'Sell' && Number(price) > 0 && newQty > 0) {
+          const oldCb = Number(sheet.getRange(foundRow, 6).getValue()) || 0;
+          const newCb = ((oldQty * oldCb) + (mathQty * Number(price))) / newQty;
+          sheet.getRange(foundRow, 6).setValue(newCb);
+        }
       } else {
         // Cash or Loan
         if (category.startsWith('USD') || category === 'Loan') {
@@ -326,9 +338,19 @@ function doPost(e) {
       if (category === 'USD Stock') {
         sheet.getRange(newRow, 4).setFormula(`=${newQty}*GOOGLEFINANCE("${ticker}","price")`);
         sheet.getRange(newRow, 5).setFormula(`=D${newRow}*32`);
+        if (Number(price) > 0) {
+          sheet.getRange(newRow, 6).setValue(Number(price));
+        } else {
+          sheet.getRange(newRow, 6).setFormula(`=INDEX(GOOGLEFINANCE("${ticker}","price",DATE(2025,1,1)),2,2)`);
+        }
       } else if (category === 'NTD Stock') {
         sheet.getRange(newRow, 5).setFormula(`=${newQty}*GOOGLEFINANCE("TPE:${ticker}","price")`);
         sheet.getRange(newRow, 4).setFormula(`=E${newRow}/32`);
+        if (Number(price) > 0) {
+          sheet.getRange(newRow, 6).setValue(Number(price));
+        } else {
+          sheet.getRange(newRow, 6).setFormula(`=INDEX(GOOGLEFINANCE("TPE:${ticker}","price",DATE(2025,1,1)),2,2)`);
+        }
       } else {
         // Cash or Loan
         if (category.startsWith('USD') || category === 'Loan') {

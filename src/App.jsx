@@ -38,6 +38,7 @@ export default function App() {
   const [timeFilter, setTimeFilter] = useState('All');
   const [currency, setCurrency] = useState('USD');
   const [activeTab, setActiveTab] = useState('Overview');
+  const [roiTab, setRoiTab] = useState('US');
   
   const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', type: 'Buy', price: '', isDebt: false });
   const [cashEdits, setCashEdits] = useState({});
@@ -395,7 +396,7 @@ export default function App() {
           </button>
         </div>
         <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderBottom: '2px solid #e2e8f0', width: '100%', overflowX: 'auto' }}>
-          {['Overview', 'Portfolio Advice', 'Stock Holdings', 'Stock Returns'].map(tab => (
+          {['Overview', 'Portfolio Advice', 'Stock Holdings'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -561,6 +562,88 @@ export default function App() {
                  </div>
                </div>
             ))}
+          </div>
+        </div>
+
+        {/* ROI Tracking Card */}
+        <div className={`glass-card ${poppedCard === 'roi' ? 'popped-out' : ''}`}>
+          <div onClick={() => setPoppedCard(p => p === 'roi' ? null : 'roi')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontWeight: 600, margin: 0 }}>📈 ROI Tracking</h2>
+            <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'roi' ? '✕' : '⤢'}</span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            <button
+              onClick={(e) => { e.stopPropagation(); setRoiTab('US'); }}
+              style={{
+                flex: 1,
+                padding: '0.4rem',
+                border: 'none',
+                background: roiTab === 'US' ? '#3b82f6' : '#e2e8f0',
+                color: roiTab === 'US' ? '#fff' : '#475569',
+                borderRadius: '8px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >🇺🇸 US</button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setRoiTab('TW'); }}
+              style={{
+                flex: 1,
+                padding: '0.4rem',
+                border: 'none',
+                background: roiTab === 'TW' ? '#10b981' : '#e2e8f0',
+                color: roiTab === 'TW' ? '#fff' : '#475569',
+                borderRadius: '8px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >🇹🇼 TW</button>
+          </div>
+          
+          <div style={{ maxHeight: poppedCard === 'roi' ? 'none' : '300px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+             {portfolioItems.filter(i => {
+                const targetCategory = roiTab === 'US' ? 'USD Stock' : 'NTD Stock';
+                const isTarget = i.category === targetCategory || (targetCategory === 'NTD Stock' && i.category === 'NTD Preferred');
+                return isTarget && Number(i.usdValue) !== 0;
+             }).length === 0 && (
+                <p style={{ color: '#64748b', fontSize: '0.9rem', textAlign: 'center', marginTop: '1rem' }}>No {roiTab} stocks to track.</p>
+             )}
+             {portfolioItems.filter(i => {
+                const targetCategory = roiTab === 'US' ? 'USD Stock' : 'NTD Stock';
+                const isTarget = i.category === targetCategory || (targetCategory === 'NTD Stock' && i.category === 'NTD Preferred');
+                return isTarget && Number(i.usdValue) !== 0;
+             }).map(item => {
+               const histPrice = Number(item.histPrice) || 0;
+               const qty = Number(item.qty) || 1;
+               const isNtd = item.category === 'NTD Stock' || item.category === 'NTD Preferred';
+               
+               const curPriceUsd = Number(item.usdValue) / qty;
+               const curPriceNtd = Number(item.ntdValue) / qty;
+               const currentPrice = isNtd ? curPriceNtd : curPriceUsd;
+               
+               const roi = histPrice > 0 ? ((currentPrice / histPrice) - 1) * 100 : 0;
+               const isPositive = roi >= 0;
+               
+               return (
+                 <div key={item.ticker} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid #e2e8f0', alignItems: 'center' }}>
+                   <div>
+                     <strong style={{ fontSize: '1rem', color: '#1e293b' }}>{tickerLabel(item.ticker)}</strong>
+                     <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.1rem' }}>Qty: {qty}</div>
+                   </div>
+                   <div style={{ textAlign: 'right' }}>
+                     <div style={{ color: isPositive ? '#10b981' : '#ef4444', fontWeight: 700, fontSize: '1.1rem' }}>
+                       {histPrice > 0 ? `${isPositive ? '+' : ''}${roi.toFixed(2)}%` : 'TBD'}
+                     </div>
+                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.1rem' }}>
+                       {isNtd ? 'NT$' : '$'}{currentPrice.toFixed(2)} / {histPrice > 0 ? `${isNtd ? 'NT$' : '$'}${histPrice.toFixed(2)}` : 'Wait'}
+                     </div>
+                   </div>
+                 </div>
+               );
+             })}
           </div>
         </div>
       </div>
@@ -744,46 +827,6 @@ export default function App() {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {activeTab === 'Stock Returns' && (
-        <div className="dashboard-grid">
-           <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
-             <h2 style={{ fontWeight: 600, marginBottom: '2rem' }}>📈 ROI Tracking (Since 2025/1/1)</h2>
-             {portfolioItems.filter(i => (i.category === 'USD Stock' || i.category === 'NTD Stock' || i.category === 'NTD Preferred') && Number(i.usdValue) !== 0).length === 0 && (
-                <p style={{ color: '#64748b' }}>No stocks to track or waiting for backend integration.</p>
-             )}
-             {portfolioItems.filter(i => (i.category === 'USD Stock' || i.category === 'NTD Stock' || i.category === 'NTD Preferred') && Number(i.usdValue) !== 0).map(item => {
-               const histPrice = Number(item.histPrice) || 0;
-               const qty = Number(item.qty) || 1;
-               const isNtd = item.category === 'NTD Stock' || item.category === 'NTD Preferred';
-               
-               const curPriceUsd = Number(item.usdValue) / qty;
-               const curPriceNtd = Number(item.ntdValue) / qty;
-               const currentPrice = isNtd ? curPriceNtd : curPriceUsd;
-               
-               const roi = histPrice > 0 ? ((currentPrice / histPrice) - 1) * 100 : 0;
-               const isPositive = roi >= 0;
-               
-               return (
-                 <div key={item.ticker} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid #e2e8f0', alignItems: 'center' }}>
-                   <div>
-                     <strong style={{ fontSize: '1.2rem', color: '#1e293b' }}>{tickerLabel(item.ticker)}</strong>
-                     <div style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '0.2rem' }}>{item.category} • Qty: {qty}</div>
-                   </div>
-                   <div style={{ textAlign: 'right' }}>
-                     <div style={{ color: isPositive ? '#10b981' : '#ef4444', fontWeight: 700, fontSize: '1.3rem' }}>
-                       {histPrice > 0 ? `${isPositive ? '+' : ''}${roi.toFixed(2)}%` : 'TBD'}
-                     </div>
-                     <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.2rem' }}>
-                       Current: {isNtd ? 'NT$' : '$'}{currentPrice.toFixed(2)} | Cost Basis: {histPrice > 0 ? `${isNtd ? 'NT$' : '$'}${histPrice.toFixed(2)}` : 'Syncing...'}
-                     </div>
-                   </div>
-                 </div>
-               );
-             })}
-           </div>
         </div>
       )}
 
