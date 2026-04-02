@@ -494,9 +494,10 @@ export default function App() {
                     nameKey="name" 
                     cx="50%" 
                     cy="50%" 
-                    innerRadius={50} 
-                    outerRadius={85} 
+                    innerRadius={poppedCard === 'distribution' ? 100 : 50} 
+                    outerRadius={poppedCard === 'distribution' ? 180 : 85} 
                     paddingAngle={4}
+                    label={poppedCard === 'distribution' ? ({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%` : false}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill || PIE_COLORS[index % PIE_COLORS.length]} />
