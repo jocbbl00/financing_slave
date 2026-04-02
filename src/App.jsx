@@ -645,40 +645,42 @@ export default function App() {
                   <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'us' ? '✕' : '⤢'}</span>
                 </div>
                 {usStocksData.length > 0 ? (
-                  <>
-                    <div style={{ textAlign: 'center', height: poppedCard === 'us' ? '500px' : '250px' }}>
-                    <ResponsiveContainer width="100%" height={poppedCard === 'us' ? 500 : 250}>
-                      <PieChart>
-                        <Pie 
-                          data={usStocksData} 
-                          dataKey="value" 
-                          nameKey="name" 
-                          cx="50%" 
-                          cy="50%" 
-                          innerRadius={poppedCard === 'us' ? 100 : 40} 
-                          outerRadius={poppedCard === 'us' ? 180 : 80} 
-                          paddingAngle={4}
-                          label={poppedCard === 'us' ? ({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%` : false}
-                        >
-                          {usStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.USD}${(val).toLocaleString()}`} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'us' ? 'column' : 'row' }}>
+                    <div style={{ flex: '1 1 200px', minHeight: poppedCard === 'us' ? '500px' : '250px', width: '100%' }}>
+                      <ResponsiveContainer width="100%" height={poppedCard === 'us' ? 500 : 250}>
+                        <PieChart>
+                          <Pie 
+                            data={usStocksData} 
+                            dataKey="value" 
+                            nameKey="name" 
+                            cx="50%" 
+                            cy="50%" 
+                            innerRadius={poppedCard === 'us' ? 100 : 40} 
+                            outerRadius={poppedCard === 'us' ? 180 : 80} 
+                            paddingAngle={4}
+                            label={poppedCard === 'us' ? ({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%` : false}
+                          >
+                            {usStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                          </Pie>
+                          <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.USD}${(val).toLocaleString()}`} contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                        </PieChart>
+                      </ResponsiveContainer>
                     </div>
-                    <div style={{ marginTop: '1rem', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
                       {usStocksData.map((e, index) => {
                         const total = usStocksData.reduce((s, i) => s + i.value, 0);
                         const pct = total > 0 ? ((e.value / total) * 100).toFixed(1) : '0.0';
                         return (
-                         <div key={e.name} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
-                           <span style={{ color: PIE_COLORS[index % PIE_COLORS.length], fontWeight: 600 }}>● {e.name}</span>
-                           <span>${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)</span>
-                         </div>
+                          <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
+                              {e.name} - ${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)
+                            </span>
+                          </div>
                         );
                       })}
                     </div>
-                  </>
+                  </div>
                 ) : <p style={{ color: '#64748b' }}>No US Stocks logged.</p>}
               </div>
 
@@ -688,40 +690,42 @@ export default function App() {
                   <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'tw' ? '✕' : '⤢'}</span>
                 </div>
                 {twStocksData.length > 0 ? (
-                   <>
-                    <div style={{ textAlign: 'center', height: poppedCard === 'tw' ? '500px' : '250px' }}>
-                    <ResponsiveContainer width="100%" height={poppedCard === 'tw' ? 500 : 250}>
-                      <PieChart>
-                        <Pie 
-                          data={twStocksData} 
-                          dataKey="value" 
-                          nameKey="name" 
-                          cx="50%" 
-                          cy="50%" 
-                          innerRadius={poppedCard === 'tw' ? 100 : 40} 
-                          outerRadius={poppedCard === 'tw' ? 180 : 80} 
-                          paddingAngle={4}
-                          label={poppedCard === 'tw' ? ({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%` : false}
-                        >
-                          {twStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[(index + 4) % PIE_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.NTD}${(val).toLocaleString()}`} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'tw' ? 'column' : 'row' }}>
+                    <div style={{ flex: '1 1 200px', minHeight: poppedCard === 'tw' ? '500px' : '250px', width: '100%' }}>
+                      <ResponsiveContainer width="100%" height={poppedCard === 'tw' ? 500 : 250}>
+                        <PieChart>
+                          <Pie 
+                            data={twStocksData} 
+                            dataKey="value" 
+                            nameKey="name" 
+                            cx="50%" 
+                            cy="50%" 
+                            innerRadius={poppedCard === 'tw' ? 100 : 40} 
+                            outerRadius={poppedCard === 'tw' ? 180 : 80} 
+                            paddingAngle={4}
+                            label={poppedCard === 'tw' ? ({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%` : false}
+                          >
+                            {twStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[(index + 4) % PIE_COLORS.length]} />)}
+                          </Pie>
+                          <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.NTD}${(val).toLocaleString()}`} contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                        </PieChart>
+                      </ResponsiveContainer>
                     </div>
-                    <div style={{ marginTop: '1rem', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
                       {twStocksData.map((e, index) => {
                         const total = twStocksData.reduce((s, i) => s + i.value, 0);
                         const pct = total > 0 ? ((e.value / total) * 100).toFixed(1) : '0.0';
                         return (
-                         <div key={e.name} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
-                           <span style={{ color: PIE_COLORS[(index + 4) % PIE_COLORS.length], fontWeight: 600 }}>● {e.name}</span>
-                           <span>NT${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)</span>
-                         </div>
+                          <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[(index + 4) % PIE_COLORS.length], flexShrink: 0 }}></span>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
+                              {e.name} - NT${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)
+                            </span>
+                          </div>
                         );
                       })}
                     </div>
-                   </>
+                  </div>
                 ) : <p style={{ color: '#64748b' }}>No Taiwan Stocks logged.</p>}
               </div>
             </div>
