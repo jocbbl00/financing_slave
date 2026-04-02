@@ -639,17 +639,27 @@ export default function App() {
             <h2 style={{ fontWeight: 600, marginBottom: '2rem' }}>📈 Equity Portfolio Breakdown</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
               
-              <div className={poppedCard === 'us' ? 'popped-out glass-card' : ''} style={{ background: 'rgba(255,255,255,0.4)', padding: '1.5rem', borderRadius: '12px' }}>
+              <div className={`glass-card ${poppedCard === 'us' ? 'popped-out' : ''}`}>
                 <div onClick={() => setPoppedCard(p => p === 'us' ? null : 'us')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
                   <h3 style={{ color: '#3b82f6', margin: 0 }}>🇺🇸 US Stocks (USD) — ${usStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
                   <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'us' ? '✕' : '⤢'}</span>
                 </div>
                 {usStocksData.length > 0 ? (
                   <>
-                    <div style={{ textAlign: 'center', height: poppedCard === 'us' ? '60vh' : '250px' }}>
-                    <ResponsiveContainer width="100%" height={poppedCard === 'us' ? '100%' : 250}>
+                    <div style={{ textAlign: 'center', height: poppedCard === 'us' ? '500px' : '250px' }}>
+                    <ResponsiveContainer width="100%" height={poppedCard === 'us' ? 500 : 250}>
                       <PieChart>
-                        <Pie data={usStocksData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={80} label={({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%`}>
+                        <Pie 
+                          data={usStocksData} 
+                          dataKey="value" 
+                          nameKey="name" 
+                          cx="50%" 
+                          cy="50%" 
+                          innerRadius={poppedCard === 'us' ? 100 : 40} 
+                          outerRadius={poppedCard === 'us' ? 180 : 80} 
+                          paddingAngle={4}
+                          label={poppedCard === 'us' ? ({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%` : false}
+                        >
                           {usStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                         </Pie>
                         <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.USD}${(val).toLocaleString()}`} />
@@ -672,17 +682,27 @@ export default function App() {
                 ) : <p style={{ color: '#64748b' }}>No US Stocks logged.</p>}
               </div>
 
-              <div className={poppedCard === 'tw' ? 'popped-out glass-card' : ''} style={{ background: 'rgba(255,255,255,0.4)', padding: '1.5rem', borderRadius: '12px' }}>
+              <div className={`glass-card ${poppedCard === 'tw' ? 'popped-out' : ''}`}>
                 <div onClick={() => setPoppedCard(p => p === 'tw' ? null : 'tw')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
                   <h3 style={{ color: '#10b981', margin: 0 }}>🇹🇼 Taiwan Stocks (NTD) — NT${twStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
                   <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'tw' ? '✕' : '⤢'}</span>
                 </div>
                 {twStocksData.length > 0 ? (
                    <>
-                    <div style={{ textAlign: 'center', height: poppedCard === 'tw' ? '60vh' : '250px' }}>
-                    <ResponsiveContainer width="100%" height={poppedCard === 'tw' ? '100%' : 250}>
+                    <div style={{ textAlign: 'center', height: poppedCard === 'tw' ? '500px' : '250px' }}>
+                    <ResponsiveContainer width="100%" height={poppedCard === 'tw' ? 500 : 250}>
                       <PieChart>
-                        <Pie data={twStocksData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={80} label={({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%`}>
+                        <Pie 
+                          data={twStocksData} 
+                          dataKey="value" 
+                          nameKey="name" 
+                          cx="50%" 
+                          cy="50%" 
+                          innerRadius={poppedCard === 'tw' ? 100 : 40} 
+                          outerRadius={poppedCard === 'tw' ? 180 : 80} 
+                          paddingAngle={4}
+                          label={poppedCard === 'tw' ? ({name, percent}) => `${name} ${(percent * 100).toFixed(1)}%` : false}
+                        >
                           {twStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[(index + 4) % PIE_COLORS.length]} />)}
                         </Pie>
                         <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.NTD}${(val).toLocaleString()}`} />
