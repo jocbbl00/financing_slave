@@ -429,12 +429,12 @@ header p {
   margin: 0 !important;
   transform: none !important;
   transition: none !important;
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: rgba(254, 240, 138, 0.95) !important;
 }
 
 .glass-card.popped-out:hover {
   transform: none !important;
-  background: rgba(255, 255, 255, 0.95) !important;
+  background: rgba(254, 240, 138, 0.95) !important;
 }
 
 /* Prevent parent glass-card from shifting when a child is popped out */

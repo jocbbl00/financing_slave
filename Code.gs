@@ -11,16 +11,28 @@ function doGet(e) {
   if (portfolioSheet) {
     const lastRow = portfolioSheet.getLastRow();
     if (lastRow >= 2) {
-      const rawData = portfolioSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+      const rawData = portfolioSheet.getRange(2, 1, lastRow - 1, 6).getValues();
       portfolio = rawData
         .filter(row => row[0] !== '')
-        .map(row => ({
-          category: row[0] === 'NTD Preferred' ? 'NTD Stock' : row[0],   // e.g. "USD Stock", "NTD Cash", "Loan", handling legacy NTD Preferred
-          ticker: row[1],     // e.g. "AAPL", "Firstrade", "NTD Loan"
-          qty: row[2],        // shares or blank for cash
-          usdValue: row[3],   // computed by GOOGLEFINANCE formula or static
-          ntdValue: row[4],   // computed or static
-        }));
+        .map((row, index) => {
+          let histPriceStr = row[5];
+          const isStock = row[0] === 'USD Stock' || row[0] === 'NTD Stock' || row[0] === 'NTD Preferred';
+          
+          if (!histPriceStr && isStock) {
+             const tickerPrefix = (row[0] === 'NTD Stock' || row[0] === 'NTD Preferred') ? `"TPE:${row[1]}"` : `"${row[1]}"`;
+             portfolioSheet.getRange(index + 2, 6).setFormula(`=INDEX(GOOGLEFINANCE(${tickerPrefix},"price",DATE(2025,1,1)),2,2)`);
+             histPriceStr = 0;
+          }
+
+          return {
+            category: row[0] === 'NTD Preferred' ? 'NTD Stock' : row[0],   // e.g. "USD Stock", "NTD Cash", "Loan", handling legacy NTD Preferred
+            ticker: row[1],     // e.g. "AAPL", "Firstrade", "NTD Loan"
+            qty: row[2],        // shares or blank for cash
+            usdValue: row[3],   // computed by GOOGLEFINANCE formula or static
+            ntdValue: row[4],   // computed or static
+            histPrice: histPriceStr
+          };
+        });
     }
   }
 
@@ -243,16 +255,26 @@ function doPost(e) {
   
   // ===== UPDATE LEDGER: Core Transaction & Portfolio holding append/update =====
   if (requestData.action === 'update_ledger') {
-    const { category, ticker, qty, date } = requestData;
+    const { category, ticker, qty, date, type, price } = requestData;
+    
+    // Determine mathematical quantity
+    const mathQty = (type === 'Sell') ? -Math.abs(Number(qty)) : Number(qty);
     
     // 1. Log to Transactions
     let txSheet = spreadsheet.getSheetByName('Transactions');
     if(!txSheet) {
       txSheet = spreadsheet.insertSheet('Transactions');
-      txSheet.appendRow(['Date', 'Category', 'Ticker', 'Amount']);
+      txSheet.appendRow(['Date', 'Category', 'Ticker', 'Amount', 'Type', 'Price']);
+    } else {
+      // Ensure header has Type and Price
+      const header = txSheet.getRange(1, 1, 1, txSheet.getLastColumn()).getValues()[0];
+      if (header.length < 5 || header[4] !== 'Type') {
+        txSheet.getRange(1, 5).setValue('Type');
+        txSheet.getRange(1, 6).setValue('Price');
+      }
     }
     const insertDate = date ? new Date(date) : new Date();
-    txSheet.appendRow([insertDate, category, ticker, qty]);
+    txSheet.appendRow([insertDate, category, ticker, mathQty, type || 'Buy', price || 0]);
 
     // 2. Update Portfolio
     let sheet = spreadsheet.getSheetByName('Portfolio');
@@ -262,14 +284,14 @@ function doPost(e) {
     
     const lastRow = sheet.getLastRow();
     let foundRow = -1;
-    let newQty = Number(qty);
+    let newQty = mathQty;
 
     if (lastRow >= 2) {
       const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
       for (let i = 0; i < data.length; i++) {
         if (data[i][1] === ticker && data[i][0] === category) {
           foundRow = i + 2;
-          newQty = Number(data[i][2]) + Number(qty);
+          newQty = Number(data[i][2]) + mathQty;
           break;
         }
       }

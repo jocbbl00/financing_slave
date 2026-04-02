@@ -39,7 +39,7 @@ export default function App() {
   const [currency, setCurrency] = useState('USD');
   const [activeTab, setActiveTab] = useState('Overview');
   
-  const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', isDebt: false });
+  const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', type: 'Buy', price: '', isDebt: false });
   const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   
@@ -321,12 +321,20 @@ export default function App() {
     try {
       await fetch(API_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'update_ledger', date: formData.date, category: formData.category, ticker: formData.ticker, qty: finalAmount }),
+        body: JSON.stringify({ 
+          action: 'update_ledger', 
+          date: formData.date, 
+          category: formData.category, 
+          ticker: formData.ticker, 
+          qty: finalAmount,
+          type: formData.type,
+          price: Number(formData.price) || 0
+        }),
       });
 
       // Optimistic internal cache refetch
       setIsModalOpen(false);
-      setFormData({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', isDebt: false });
+      setFormData({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', type: 'Buy', price: '', isDebt: false });
       fetchPortfolio(); 
     } catch (err) {
       console.error('Failed to update asset', err);
@@ -387,7 +395,7 @@ export default function App() {
           </button>
         </div>
         <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderBottom: '2px solid #e2e8f0', width: '100%', overflowX: 'auto' }}>
-          {['Overview', 'Portfolio Advice', 'Stock Holdings'].map(tab => (
+          {['Overview', 'Portfolio Advice', 'Stock Holdings', 'Stock Returns'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -739,6 +747,46 @@ export default function App() {
         </div>
       )}
 
+      {activeTab === 'Stock Returns' && (
+        <div className="dashboard-grid">
+           <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
+             <h2 style={{ fontWeight: 600, marginBottom: '2rem' }}>📈 ROI Tracking (Since 2025/1/1)</h2>
+             {portfolioItems.filter(i => (i.category === 'USD Stock' || i.category === 'NTD Stock' || i.category === 'NTD Preferred') && Number(i.usdValue) !== 0).length === 0 && (
+                <p style={{ color: '#64748b' }}>No stocks to track or waiting for backend integration.</p>
+             )}
+             {portfolioItems.filter(i => (i.category === 'USD Stock' || i.category === 'NTD Stock' || i.category === 'NTD Preferred') && Number(i.usdValue) !== 0).map(item => {
+               const histPrice = Number(item.histPrice) || 0;
+               const qty = Number(item.qty) || 1;
+               const isNtd = item.category === 'NTD Stock' || item.category === 'NTD Preferred';
+               
+               const curPriceUsd = Number(item.usdValue) / qty;
+               const curPriceNtd = Number(item.ntdValue) / qty;
+               const currentPrice = isNtd ? curPriceNtd : curPriceUsd;
+               
+               const roi = histPrice > 0 ? ((currentPrice / histPrice) - 1) * 100 : 0;
+               const isPositive = roi >= 0;
+               
+               return (
+                 <div key={item.ticker} style={{ display: 'flex', justifyContent: 'space-between', padding: '1rem', borderBottom: '1px solid #e2e8f0', alignItems: 'center' }}>
+                   <div>
+                     <strong style={{ fontSize: '1.2rem', color: '#1e293b' }}>{tickerLabel(item.ticker)}</strong>
+                     <div style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '0.2rem' }}>{item.category} • Qty: {qty}</div>
+                   </div>
+                   <div style={{ textAlign: 'right' }}>
+                     <div style={{ color: isPositive ? '#10b981' : '#ef4444', fontWeight: 700, fontSize: '1.3rem' }}>
+                       {histPrice > 0 ? `${isPositive ? '+' : ''}${roi.toFixed(2)}%` : 'TBD'}
+                     </div>
+                     <div style={{ fontSize: '0.85rem', color: '#64748b', marginTop: '0.2rem' }}>
+                       Current: {isNtd ? 'NT$' : '$'}{currentPrice.toFixed(2)} | Cost Basis: {histPrice > 0 ? `${isNtd ? 'NT$' : '$'}${histPrice.toFixed(2)}` : 'Syncing...'}
+                     </div>
+                   </div>
+                 </div>
+               );
+             })}
+           </div>
+        </div>
+      )}
+
       {/* UPDATE ASSET MODAL */}
       <div className={`modal-overlay ${isModalOpen ? 'active' : ''}`}>
         <div className="modal-content">
@@ -781,6 +829,32 @@ export default function App() {
                 onChange={e => setFormData({...formData, ticker: e.target.value})}
                 required
               />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
+              <div style={{ flex: 1 }}>
+                <label>Type</label>
+                <select 
+                  className="form-control"
+                  value={formData.type}
+                  onChange={e => setFormData({...formData, type: e.target.value})}
+                >
+                  <option value="Buy">Buy / Deposit</option>
+                  <option value="Sell">Sell / Withdraw</option>
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Price (Per Share) *Optional</label>
+                <input 
+                  type="number"
+                  className="form-control"
+                  placeholder="e.g. 150.00"
+                  value={formData.price}
+                  onChange={e => setFormData({...formData, price: e.target.value})}
+                  step="0.01"
+                  min="0"
+                />
+              </div>
             </div>
             
             <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
