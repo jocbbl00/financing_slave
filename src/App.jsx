@@ -39,7 +39,7 @@ export default function App() {
   const [currency, setCurrency] = useState('USD');
   const [activeTab, setActiveTab] = useState('Overview');
   
-  const [formData, setFormData] = useState({ category: '', amount: '', isDebt: false });
+  const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', isDebt: false });
   const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   
@@ -321,12 +321,12 @@ export default function App() {
     try {
       await fetch(API_URL, {
         method: 'POST',
-        body: JSON.stringify({ category: formData.category, amount: finalAmount }),
+        body: JSON.stringify({ action: 'update_ledger', date: formData.date, category: formData.category, ticker: formData.ticker, qty: finalAmount }),
       });
 
       // Optimistic internal cache refetch
       setIsModalOpen(false);
-      setFormData({ category: '', amount: '', isDebt: false });
+      setFormData({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', isDebt: false });
       fetchPortfolio(); 
     } catch (err) {
       console.error('Failed to update asset', err);
@@ -713,13 +713,24 @@ export default function App() {
         <div className="modal-content">
           <h2 style={{ marginBottom: '1.25rem', color: '#0f172a' }}>Add / Update Ledger</h2>
           <form onSubmit={handleAddAsset}>
-            <div className="form-group">
-              <label>Category (Type new or select)</label>
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label>Date</label>
+              <input 
+                type="date" 
+                className="form-control" 
+                value={formData.date}
+                onChange={e => setFormData({...formData, date: e.target.value})}
+                required
+              />
+            </div>
+            
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label>Category</label>
               <input 
                 type="text"
                 list="asset-categories"
                 className="form-control" 
-                placeholder="e.g. Bank A, Student Loan"
+                placeholder="e.g. USD Stock, NTD Cash"
                 value={formData.category}
                 onChange={e => setFormData({...formData, category: e.target.value})}
                 required
@@ -728,8 +739,20 @@ export default function App() {
                 {existingCategories.map(cat => <option key={cat} value={cat} />)}
               </datalist>
             </div>
+
+            <div className="form-group" style={{ marginBottom: '1rem' }}>
+              <label>Stock Number / Asset Name</label>
+              <input 
+                type="text"
+                className="form-control" 
+                placeholder="e.g. AAPL, 2330, Bank A"
+                value={formData.ticker}
+                onChange={e => setFormData({...formData, ticker: e.target.value})}
+                required
+              />
+            </div>
             
-            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', marginBottom: '1rem' }}>
+            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
               <input 
                 type="checkbox" 
                 id="isDebt" 
@@ -742,12 +765,12 @@ export default function App() {
               </label>
             </div>
 
-            <div className="form-group">
-              <label>Amount (Add to balance)</label>
+            <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+              <label>Amount (Quantity or Monetary Value)</label>
               <input 
                 type="number" 
                 className="form-control" 
-                placeholder="e.g. 5000"
+                placeholder="e.g. 50 (shares) or 5000 (dollars)"
                 value={formData.amount}
                 onChange={e => setFormData({...formData, amount: e.target.value})}
                 min="0" /* Negative dynamically handled by checkbox */

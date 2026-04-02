@@ -241,65 +241,94 @@ function doPost(e) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
   
-  // ===== ADD STOCK: Add a new stock holding =====
-  if (requestData.action === 'add_stock') {
-    const { category, ticker, qty } = requestData;
+  // ===== UPDATE LEDGER: Core Transaction & Portfolio holding append/update =====
+  if (requestData.action === 'update_ledger') {
+    const { category, ticker, qty, date } = requestData;
+    
+    // 1. Log to Transactions
+    let txSheet = spreadsheet.getSheetByName('Transactions');
+    if(!txSheet) {
+      txSheet = spreadsheet.insertSheet('Transactions');
+      txSheet.appendRow(['Date', 'Category', 'Ticker', 'Amount']);
+    }
+    const insertDate = date ? new Date(date) : new Date();
+    txSheet.appendRow([insertDate, category, ticker, qty]);
+
+    // 2. Update Portfolio
     let sheet = spreadsheet.getSheetByName('Portfolio');
     if (!sheet) {
       return ContentService.createTextOutput(JSON.stringify({ error: "Portfolio sheet not found" })).setMimeType(ContentService.MimeType.JSON);
     }
     
-    const newRow = sheet.getLastRow() + 1;
-    sheet.getRange(newRow, 1).setValue(category);
-    sheet.getRange(newRow, 2).setValue(ticker);
-    sheet.getRange(newRow, 3).setValue(Number(qty));
-    
-    if (category === 'USD Stock') {
-      sheet.getRange(newRow, 4).setFormula(`=${qty}*GOOGLEFINANCE("${ticker}","price")`);
-      sheet.getRange(newRow, 5).setFormula(`=D${newRow}*32`);
-    } else if (category === 'NTD Stock') {
-      sheet.getRange(newRow, 5).setFormula(`=${qty}*GOOGLEFINANCE("TPE:${ticker}","price")`);
-      sheet.getRange(newRow, 4).setFormula(`=E${newRow}/32`);
+    const lastRow = sheet.getLastRow();
+    let foundRow = -1;
+    let newQty = Number(qty);
+
+    if (lastRow >= 2) {
+      const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+      for (let i = 0; i < data.length; i++) {
+        if (data[i][1] === ticker && data[i][0] === category) {
+          foundRow = i + 2;
+          newQty = Number(data[i][2]) + Number(qty);
+          break;
+        }
+      }
     }
-    
+
+    if (foundRow > -1) {
+      // Update existing row
+      sheet.getRange(foundRow, 3).setValue(newQty);
+      if (category === 'USD Stock') {
+        sheet.getRange(foundRow, 4).setFormula(`=${newQty}*GOOGLEFINANCE("${ticker}","price")`);
+        sheet.getRange(foundRow, 5).setFormula(`=D${foundRow}*32`);
+      } else if (category === 'NTD Stock') {
+        sheet.getRange(foundRow, 5).setFormula(`=${newQty}*GOOGLEFINANCE("TPE:${ticker}","price")`);
+        sheet.getRange(foundRow, 4).setFormula(`=E${foundRow}/32`);
+      } else {
+        // Cash or Loan
+        if (category.startsWith('USD') || category === 'Loan') {
+          sheet.getRange(foundRow, 4).setValue(newQty);
+          sheet.getRange(foundRow, 5).setFormula(`=D${foundRow}*32`);
+        } else {
+          sheet.getRange(foundRow, 5).setValue(newQty);
+          sheet.getRange(foundRow, 4).setFormula(`=E${foundRow}/32`);
+        }
+      }
+    } else {
+      // Create new row
+      const newRow = lastRow + 1;
+      sheet.getRange(newRow, 1).setValue(category);
+      sheet.getRange(newRow, 2).setValue(ticker);
+      sheet.getRange(newRow, 3).setValue(newQty);
+      
+      if (category === 'USD Stock') {
+        sheet.getRange(newRow, 4).setFormula(`=${newQty}*GOOGLEFINANCE("${ticker}","price")`);
+        sheet.getRange(newRow, 5).setFormula(`=D${newRow}*32`);
+      } else if (category === 'NTD Stock') {
+        sheet.getRange(newRow, 5).setFormula(`=${newQty}*GOOGLEFINANCE("TPE:${ticker}","price")`);
+        sheet.getRange(newRow, 4).setFormula(`=E${newRow}/32`);
+      } else {
+        // Cash or Loan
+        if (category.startsWith('USD') || category === 'Loan') {
+          sheet.getRange(newRow, 4).setValue(newQty);
+          sheet.getRange(newRow, 5).setFormula(`=D${newRow}*32`);
+        } else {
+          sheet.getRange(newRow, 5).setValue(newQty);
+          sheet.getRange(newRow, 4).setFormula(`=E${newRow}/32`);
+        }
+      }
+    }
+
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success',
-      message: `Added ${qty} shares of ${ticker} as ${category}`
+      message: `Ledger updated: ${qty} for ${ticker} (${category})`
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // ===== LEGACY: Bulk load historical transactions =====
-  if (requestData.action === 'bulk_tx') {
-    let txSheet = spreadsheet.getSheetByName('Transactions');
-    if (!txSheet) {
-      txSheet = spreadsheet.insertSheet('Transactions');
-      txSheet.appendRow(['Date', 'Category', 'Amount']);
-    }
-    
-    const rows = requestData.data;
-    if(rows && rows.length > 0) {
-      txSheet.getRange(txSheet.getLastRow() + 1, 1, rows.length, 3).setValues(rows);
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({
-      status: 'success',
-      message: `Successfully loaded ${rows.length} historical transactions!`
-    })).setMimeType(ContentService.MimeType.JSON);
-  }
-  
-  // ===== LEGACY: Single transaction update =====
-  const { category, amount, date } = requestData;
-  let txSheet = spreadsheet.getSheetByName('Transactions');
-  if(!txSheet) {
-    txSheet = spreadsheet.insertSheet('Transactions');
-    txSheet.appendRow(['Date', 'Category', 'Amount']);
-  }
-  const insertDate = date ? new Date(date) : new Date();
-  txSheet.appendRow([insertDate, category, amount]);
-
+  // Catch-all response for unmatched actions
   return ContentService.createTextOutput(JSON.stringify({
-    status: 'success',
-    message: `Recorded ${amount} for ${category}`
+    status: 'ignored',
+    message: 'Action not matched or unsupported in this version.'
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
