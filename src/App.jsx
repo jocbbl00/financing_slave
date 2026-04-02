@@ -108,20 +108,14 @@ export default function App() {
   };
 
   // Calculate base for percentage display based strictly on gross positive assets
-  const getTotalNtdBase = () => {
-    return portfolio.reduce((acc, c) => {
-      const isUsd = c.category.startsWith('USD') || c.category === 'Loan';
-      const val = isUsd ? c.amount * 32 : c.amount;
-      return val > 0 ? acc + val : acc;
-    }, 0);
-  };
-  
+  const totalGrossUsd = portfolio.reduce((acc, c) => (c.currentUsd > 0 && c.category !== 'Loan') ? acc + c.currentUsd : acc, 0);
+
   const enrichedPortfolio = portfolio.map(asset => {
-    const assetNtdValue = asset.category.startsWith('USD') ? asset.amount * 32 : asset.amount;
-    const truePercentage = (getTotalNtdBase() > 0 && assetNtdValue > 0) ? (assetNtdValue / getTotalNtdBase()) * 100 : 0;
+    const valObj = Math.abs(asset.currentUsd);
+    const pct = totalGrossUsd > 0 ? (valObj / totalGrossUsd) * 100 : 0;
     return {
       ...asset,
-      percentage: truePercentage
+      percentage: pct
     };
   });
 
@@ -275,7 +269,7 @@ export default function App() {
   // Cash accounts for the edit modal
   const cashAccounts = portfolioItems.filter(a => 
     a.category === 'USD Cash' || a.category === 'NTD Cash' || 
-    a.category === 'USD Preferred' || a.category === 'NTD Preferred' ||
+    a.category === 'USD Preferred' ||
     a.category === 'Loan'
   );
 

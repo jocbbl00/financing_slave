@@ -15,7 +15,7 @@ function doGet(e) {
       portfolio = rawData
         .filter(row => row[0] !== '')
         .map(row => ({
-          category: row[0],   // e.g. "USD Stock", "NTD Cash", "Loan"
+          category: row[0] === 'NTD Preferred' ? 'NTD Stock' : row[0],   // e.g. "USD Stock", "NTD Cash", "Loan", handling legacy NTD Preferred
           ticker: row[1],     // e.g. "AAPL", "Firstrade", "NTD Loan"
           qty: row[2],        // shares or blank for cash
           usdValue: row[3],   // computed by GOOGLEFINANCE formula or static
@@ -25,7 +25,7 @@ function doGet(e) {
   }
 
   // Build OVERVIEW summary from portfolio data
-  const categories = ['USD Cash', 'USD Preferred', 'USD Stock', 'NTD Cash', 'NTD Preferred', 'NTD Stock', 'Loan'];
+  const categories = ['USD Cash', 'USD Preferred', 'USD Stock', 'NTD Cash', 'NTD Stock', 'Loan'];
   let overviewData = [];
   let totalUsd = 0;
 
