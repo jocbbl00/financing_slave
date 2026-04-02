@@ -33,7 +33,6 @@ export default function App() {
   const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
   const [poppedCard, setPoppedCard] = useState(null);
   const [timeFilter, setTimeFilter] = useState('All');
@@ -44,14 +43,7 @@ export default function App() {
   const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   
-  // Custom Targets State loaded from localStorage
-  const [customTargets, setCustomTargets] = useState({});
-
   useEffect(() => {
-    const savedTargets = localStorage.getItem('WA_TARGETS');
-    if (savedTargets) {
-      setCustomTargets(JSON.parse(savedTargets));
-    }
     fetchPortfolio();
   }, []);
 
@@ -67,7 +59,8 @@ export default function App() {
           category: item.category,
           amount: item.category.startsWith('USD') || item.category === 'Loan' ? item.currentUsd : item.currentNtd,
           percentage: item.percentage,
-          currentNtd: item.currentNtd
+          currentNtd: item.currentNtd,
+          currentUsd: item.currentUsd
         }));
         setPortfolio(formatted);
       }
@@ -93,8 +86,6 @@ export default function App() {
   };
 
   const existingCategories = [...new Set(portfolio.map(p => p.category))];
-  const getTarget = (category) => customTargets[category] || 0;
-  const totalTarget = existingCategories.reduce((acc, cat) => acc + (customTargets[cat] || 0), 0);
 
   const totalUsdGross = portfolio.reduce((acc, curr) => {
     const isUsd = curr.category.startsWith('USD') || curr.category === 'Loan';
@@ -130,8 +121,7 @@ export default function App() {
     const truePercentage = (getTotalNtdBase() > 0 && assetNtdValue > 0) ? (assetNtdValue / getTotalNtdBase()) * 100 : 0;
     return {
       ...asset,
-      percentage: truePercentage,
-      target: getTarget(asset.category)
+      percentage: truePercentage
     };
   });
 
@@ -350,15 +340,7 @@ export default function App() {
     }
   };
 
-  const handleSaveTargets = (e) => {
-    e.preventDefault();
-    localStorage.setItem('WA_TARGETS', JSON.stringify(customTargets));
-    setIsTargetModalOpen(false);
-  };
 
-  const updateTarget = (cat, val) => {
-    setCustomTargets(prev => ({...prev, [cat]: Number(val)}));
-  };
 
   if (isLoading) {
     return (
@@ -400,9 +382,6 @@ export default function App() {
               </button>
             ))}
           </div>
-          <button className="primary-btn secondary" onClick={() => setIsTargetModalOpen(true)}>
-            Adjust Targets
-          </button>
           <button className="primary-btn secondary" onClick={() => { setCashEdits({}); setIsCashModalOpen(true); }}>
             💰 Edit Cash
           </button>
@@ -555,7 +534,6 @@ export default function App() {
             <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'allocation' ? '✕' : '⤢'}</span>
           </div>
           
-          
           <div style={{ maxHeight: poppedCard === 'allocation' ? 'none' : '300px', overflowY: 'auto', paddingRight: '1rem' }}>
             {enrichedPortfolio.map((asset) => (
                <div key={asset.category} className="allocation-item">
@@ -563,7 +541,7 @@ export default function App() {
                    <span style={{ fontWeight: '700', color: asset.amount < 0 ? '#ef4444' : '#0f172a' }}>{asset.category} {asset.amount < 0 && '(Liability)'}</span>
                    {asset.amount > 0 && (
                      <span style={{ color: '#475569', fontWeight: '600', fontSize: '0.9rem' }}>
-                        {(asset.percentage || 0).toFixed(1)}% (Target: {asset.target}%)
+                        {(asset.percentage || 0).toFixed(1)}%
                      </span>
                    )}
                  </div>
@@ -571,16 +549,12 @@ export default function App() {
                    <div className="progress-track" style={{ height: '6px' }}>
                      <div 
                        className="progress-fill" 
-                       style={{ width: `${Math.min(100, asset.percentage || 0)}%`, background: asset.percentage > asset.target + 5 ? '#ef4444' : asset.percentage < asset.target - 5 ? '#f59e0b' : '#059669' }}
-                     ></div>
-                     <div 
-                       className="progress-target" 
-                       style={{ left: `${asset.target}%`, width: '2px' }}
+                       style={{ width: `${Math.min(100, asset.percentage || 0)}%`, background: '#059669' }}
                      ></div>
                    </div>
                  )}
                  <div style={{ marginTop: '0.5rem', fontSize: '0.95rem', color: '#475569', display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
-                    <span>{asset.category.startsWith('USD') ? '$' : 'NT$'}{(asset.amount||0).toLocaleString()}</span>
+                    <span>{fmt(asset.currentUsd)}</span>
                  </div>
                </div>
             ))}
@@ -796,67 +770,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* ADJUST TARGETS MODAL */}
-      <div className={`modal-overlay ${isTargetModalOpen ? 'active' : ''}`}>
-        <div className="modal-content">
-          <h2 style={{ marginBottom: '1rem', color: '#0f172a' }}>Adjust Target Allocations</h2>
-          
-          <div style={{ 
-            marginBottom: '1.5rem', 
-            padding: '1rem', 
-            borderRadius: '12px', 
-            background: totalTarget === 100 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
-            color: totalTarget === 100 ? '#059669' : '#dc2626', 
-            fontWeight: 600, 
-            display: 'flex', 
-            justifyContent: 'space-between' 
-          }}>
-            <span>Total Allocation:</span>
-            <span>{totalTarget}% / 100%</span>
-          </div>
-          
-          <form onSubmit={handleSaveTargets}>
-            {existingCategories.map(cat => (
-              <div key={cat} className="form-group" style={{ marginBottom: '1.25rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem' }}>
-                  <label style={{ margin: 0, fontWeight: 600, color: '#334155', fontSize: '0.85rem' }}>{cat}</label>
-                  <span style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.85rem' }}>{customTargets[cat] || 0}%</span>
-                </div>
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <input 
-                    type="range" 
-                    style={{ flex: 1, accentColor: '#eab308' }}
-                    value={customTargets[cat] || 0}
-                    onChange={e => updateTarget(cat, e.target.value)}
-                    min="0"
-                    max="100"
-                  />
-                  <input 
-                    type="number" 
-                    className="form-control" 
-                    style={{ width: '60px', padding: '0.4rem', textAlign: 'center', fontSize: '0.85rem' }}
-                    value={customTargets[cat] || 0}
-                    onChange={e => updateTarget(cat, e.target.value)}
-                    min="0"
-                    max="100"
-                  />
-                </div>
-              </div>
-            ))}
-            <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
-              <button type="button" className="btn-secondary" onClick={() => setIsTargetModalOpen(false)}>Cancel</button>
-              <button 
-                type="submit" 
-                className="primary-btn" 
-                disabled={totalTarget !== 100} 
-                style={{ opacity: totalTarget === 100 ? 1 : 0.5, cursor: totalTarget === 100 ? 'pointer' : 'not-allowed' }}
-              >
-                Save Targets
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+
 
       {/* EDIT CASH / ACCOUNTS MODAL */}
       <div className={`modal-overlay ${isCashModalOpen ? 'active' : ''}`}>
