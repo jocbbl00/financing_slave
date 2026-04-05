@@ -64,8 +64,9 @@ for acct, amt in ntd_cash.items():
     row_num = len(rows) + 2
     rows.append(["NTD Cash", acct, "", f"=E{row_num}/32", amt])
 
-# ─── Debt ───
-# From Excel $$$$$ sheet: Apr 2026 remaining loan is NT$3,677,746
+# ─── Debt (placeholder — overwritten by Apps Script from Loans sheet) ───
+# Loans tab stores amortization (principal, APR, term, start); doGet syncs balance to this row.
+# Calibrated loan: ~NT$12,084,039 @ 2.1% APR, 240 mo, from 2011-07 → ~NT$61,705/mo, ~NT$3.68M left Apr 2026.
 row_num = len(rows) + 2
 rows.append(["Loan", "NTD Student Loan", "", f"=-E{row_num}/32", -3677746])
 

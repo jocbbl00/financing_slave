@@ -23,7 +23,15 @@ function useViewport() {
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbyfNl53aUdseOlPdl-6ffWlZotHqwQmw6tPZJCMO8veRLnUWVaGNasy4jLCNdhkAexf0w/exec';
 
-const PIE_COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#0ea5e9', '#facc15', '#64748b'];
+const PIE_COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#0ea5e9', '#eab308', '#94a3b8'];
+
+const CHART_TOOLTIP_STYLE = {
+  borderRadius: 12,
+  border: '1px solid #334155',
+  background: '#1e293b',
+  color: '#f8fafc',
+  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.4)',
+};
 
 const FX_RATES = { USD: 1, NTD: 32, JPY: 150 };
 const CURRENCY_SYMBOLS = { USD: '$', NTD: 'NT$', JPY: '¥' };
@@ -49,10 +57,21 @@ export default function App() {
   const [portfolio, setPortfolio] = useState([]);       // OVERVIEW-level 6-category summary
   const [portfolioItems, setPortfolioItems] = useState([]); // Individual stock/cash/debt rows
   const [historyData, setHistoryData] = useState([]);    // Historical gross/debt/net snapshots
-  const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
+  const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
+  const [loans, setLoans] = useState([]);
+  const [loanForm, setLoanForm] = useState({
+    loanName: '',
+    portfolioTicker: '',
+    principalNtd: '',
+    annualRatePct: '',
+    termMonths: '',
+    startDate: new Date().toISOString().split('T')[0],
+    monthlyPaymentNtd: '',
+    notes: '',
+  });
   const [poppedCard, setPoppedCard] = useState(null);
   const [timeFilter, setTimeFilter] = useState('All');
   const [currency, setCurrency] = useState('USD');
@@ -111,8 +130,8 @@ export default function App() {
         setHistoryData(json.history);
       }
 
-      if (json.transactions) {
-        setTransactions(json.transactions);
+      if (json.loans) {
+        setLoans(json.loans);
       }
     } catch (err) {
       console.error('Failed to fetch portfolio data', err);
@@ -136,7 +155,6 @@ export default function App() {
   }, 0);
 
   const totalUsdNet = totalUsdGross - totalUsdDebt;
-  const totalNtdNet = totalUsdNet * 32;
 
   const fmt = (usdVal) => {
     const converted = usdVal * FX_RATES[currency];
@@ -191,8 +209,7 @@ export default function App() {
     
     // Analyze user's actual holdings
     const usHoldings = portfolioItems.filter(a => a.category === 'USD Stock');
-    const totalUsValue = usHoldings.reduce((s, a) => s + (Number(a.usdValue) || 0), 0);
-    
+
     // Generate stock-specific suggestions based on portfolio and market thesis
     const allBuySuggestions = [
       [
@@ -302,37 +319,21 @@ export default function App() {
       .filter(a => a.category === 'NTD Stock' && (Number(a.ntdValue) || 0) > 0)
       .map(a => ({ name: tickerLabel(a.ticker), value: Number(a.ntdValue) || 0 }));
 
-  // Cash accounts for the edit modal
-  const cashAccounts = portfolioItems.filter(a => 
-    a.category === 'USD Cash' || a.category === 'NTD Cash' || 
-    a.category === 'USD Preferred' ||
-    a.category === 'Loan'
+  // Cash accounts for the edit modal (loans managed via Loans sheet + Add Loan)
+  const cashAccounts = portfolioItems.filter(a =>
+    a.category === 'USD Cash' || a.category === 'NTD Cash' ||
+    a.category === 'USD Preferred'
   );
-
-  const handleUpdateCash = async (ticker, amount, currency) => {
-    setIsSaving(true);
-    try {
-      await fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'update_cash', ticker, amount: Number(amount), currency }),
-      });
-      fetchPortfolio();
-    } catch (err) {
-      console.error('Failed to update cash', err);
-    } finally {
-      setIsSaving(false);
-      setIsCashModalOpen(false);
-      setCashEdits({});
-    }
-  };
 
   const handleSaveAllCash = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     try {
       for (const [ticker, amount] of Object.entries(cashEdits)) {
+        if (amount === '') continue;
         const acct = cashAccounts.find(a => a.ticker === ticker);
-        const cur = acct && (acct.category.startsWith('NTD') ? 'NTD' : 'USD');
+        if (!acct || acct.category === 'Loan') continue;
+        const cur = acct.category.startsWith('NTD') ? 'NTD' : 'USD';
         await fetch(API_URL, {
           method: 'POST',
           body: JSON.stringify({ action: 'update_cash', ticker, amount: Number(amount), currency: cur }),
@@ -345,6 +346,43 @@ export default function App() {
       setIsSaving(false);
       setIsCashModalOpen(false);
       setCashEdits({});
+    }
+  };
+
+  const handleAddLoan = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'add_loan',
+          loanName: loanForm.loanName || loanForm.portfolioTicker,
+          portfolioTicker: loanForm.portfolioTicker.trim(),
+          principalNtd: Number(loanForm.principalNtd),
+          annualRatePct: Number(loanForm.annualRatePct),
+          termMonths: Number(loanForm.termMonths),
+          startDate: loanForm.startDate,
+          monthlyPaymentNtd: loanForm.monthlyPaymentNtd === '' ? '' : Number(loanForm.monthlyPaymentNtd),
+          notes: loanForm.notes,
+        }),
+      });
+      setIsLoanModalOpen(false);
+      setLoanForm({
+        loanName: '',
+        portfolioTicker: '',
+        principalNtd: '',
+        annualRatePct: '',
+        termMonths: '',
+        startDate: new Date().toISOString().split('T')[0],
+        monthlyPaymentNtd: '',
+        notes: '',
+      });
+      fetchPortfolio();
+    } catch (err) {
+      console.error('Failed to add loan', err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -383,7 +421,7 @@ export default function App() {
   if (isLoading) {
     return (
       <div className="app-container" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <h2 style={{ color: '#0f172a' }}>Loading Historical Spreadsheets...</h2>
+        <h2 style={{ color: 'var(--text-primary)' }}>Loading Historical Spreadsheets...</h2>
       </div>
     );
   }
@@ -400,7 +438,7 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.3)', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.5)' }}>
+          <div style={{ display: 'flex', background: 'rgba(30, 41, 59, 0.6)', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
             {['USD', 'NTD', 'JPY'].map(c => (
               <button
                 key={c}
@@ -408,8 +446,8 @@ export default function App() {
                 style={{
                   padding: '0.4rem 0.75rem',
                   border: 'none',
-                  background: currency === c ? '#facc15' : 'transparent',
-                  color: currency === c ? '#0f172a' : '#475569',
+                  background: currency === c ? 'linear-gradient(135deg, #ca8a04, #eab308)' : 'transparent',
+                  color: currency === c ? '#0f172a' : 'var(--text-tertiary)',
                   fontWeight: 700,
                   cursor: 'pointer',
                   fontSize: '0.85rem',
@@ -423,6 +461,9 @@ export default function App() {
           <button className="primary-btn secondary" onClick={() => { setCashEdits({}); setIsCashModalOpen(true); }}>
             💰 Edit Cash
           </button>
+          <button className="primary-btn secondary" onClick={() => setIsLoanModalOpen(true)}>
+            📉 Add Loan
+          </button>
           <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -430,7 +471,7 @@ export default function App() {
             Update Ledger / Debt
           </button>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderBottom: '2px solid #e2e8f0', width: '100%', overflowX: 'auto' }}>
+        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderBottom: '2px solid rgba(51, 65, 85, 0.6)', width: '100%', overflowX: 'auto' }}>
           {['Overview', 'Portfolio Advice', 'Stock Holdings'].map(tab => (
             <button
               key={tab}
@@ -439,8 +480,8 @@ export default function App() {
                 padding: '0.75rem 1rem',
                 border: 'none',
                 background: 'transparent',
-                borderBottom: activeTab === tab ? '3px solid #f59e0b' : '3px solid transparent',
-                color: activeTab === tab ? '#0f172a' : '#64748b',
+                borderBottom: activeTab === tab ? '3px solid var(--accent-yellow)' : '3px solid transparent',
+                color: activeTab === tab ? 'var(--text-primary)' : 'var(--text-tertiary)',
                 fontWeight: activeTab === tab ? 700 : 500,
                 cursor: 'pointer',
                 fontSize: '1rem',
@@ -470,13 +511,34 @@ export default function App() {
         
         <div className="glass-card stat-card" style={{ borderTop: '4px solid #ef4444' }}>
           <div className="stat-label">Remaining Debt</div>
-          <div className="stat-value" style={{ color: '#ef4444' }}>{fmt(historyData.length > 0 ? historyData[historyData.length - 1].debt : totalUsdDebt)}</div>
+          <div className="stat-value" style={{ color: '#f87171' }}>{fmt(historyData.length > 0 ? historyData[historyData.length - 1].debt : totalUsdDebt)}</div>
         </div>
+
+        {loans.length > 0 && (
+        <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
+          <h2 style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '1.1rem' }}>Loans (sheet-driven)</h2>
+          <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginBottom: '1rem' }}>Remaining principal is recalculated on each refresh from the Loans sheet (fixed-rate amortization).</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {loans.map((L) => (
+              <div key={L.portfolioTicker} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '0.5rem', padding: '0.75rem 0', borderBottom: '1px solid rgba(51, 65, 85, 0.5)' }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{L.loanName}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Ticker: {L.portfolioTicker} · {L.paymentsApplied} / {L.termMonths} mo · {L.annualRatePct}% APR</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 700, color: 'var(--danger)' }}>NT${Math.round(L.remainingNtd).toLocaleString()} left</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>NT${L.monthlyPaymentNtd.toLocaleString()}/mo</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        )}
         
         <div className={`glass-card insight-card ${poppedCard === 'history' ? 'popped-out' : ''}`} style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
           <div onClick={() => setPoppedCard(p => p === 'history' ? null : 'history')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', cursor: 'pointer' }}>
             <h2 style={{ fontWeight: 600, margin: 0 }}>Equity History ({currency})</h2>
-            <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'history' ? '✕' : '⤢'}</span>
+            <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'history' ? '✕' : '⤢'}</span>
           </div>
           
             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -487,9 +549,9 @@ export default function App() {
                   style={{ 
                     padding: '0.25rem 0.75rem', 
                     borderRadius: '20px', 
-                    border: '1px solid #cbd5e1', 
-                    background: timeFilter === tf ? '#facc15' : 'transparent',
-                    color: timeFilter === tf ? '#0f172a' : '#475569',
+                    border: '1px solid rgba(234, 179, 8, 0.25)', 
+                    background: timeFilter === tf ? 'linear-gradient(135deg, #ca8a04, #eab308)' : 'transparent',
+                    color: timeFilter === tf ? '#0f172a' : 'var(--text-tertiary)',
                     fontWeight: 600,
                     cursor: 'pointer',
                     fontSize: '0.85rem'
@@ -504,9 +566,9 @@ export default function App() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={displayChartData}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="name" stroke="#64748b" />
-                    <YAxis stroke="#64748b" />
-                    <Tooltip contentStyle={{ borderRadius: '12px' }} formatter={(val) => `${CURRENCY_SYMBOLS[currency]}${val.toLocaleString()}`} />
+                    <XAxis dataKey="name" stroke="#94a3b8" />
+                    <YAxis stroke="#94a3b8" />
+                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(val) => `${CURRENCY_SYMBOLS[currency]}${val.toLocaleString()}`} />
                     <Legend />
                     <Line type="monotone" dataKey="gross" name={`Gross Assets (${currency})`} stroke="#f59e0b" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                     <Line type="monotone" dataKey="net" name={`Net Equity (${currency})`} stroke="#10b981" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
@@ -515,7 +577,7 @@ export default function App() {
                 </ResponsiveContainer>
              </div>
           ) : (
-            <p style={{ color: '#475569' }}>No historical data yet. It will appear once portfolio snapshots are recorded.</p>
+            <p style={{ color: 'var(--text-tertiary)' }}>No historical data yet. It will appear once portfolio snapshots are recorded.</p>
           )}
           
         </div>
@@ -549,7 +611,7 @@ export default function App() {
                   </Pie>
                   <Tooltip 
                     formatter={(value) => `${CURRENCY_SYMBOLS[currency]}${(value * FX_RATES[currency] / 32).toLocaleString(undefined, {maximumFractionDigits: 0})}`} 
-                    contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                    contentStyle={CHART_TOOLTIP_STYLE}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -558,7 +620,7 @@ export default function App() {
               {pieData.map((entry, index) => (
                 <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: entry.fill || PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>{entry.name}</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>{entry.name}</span>
                 </div>
               ))}
             </div>
@@ -731,7 +793,7 @@ export default function App() {
                      <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: '700' }}>{section.title}</h3>
                    </div>
                    {section.items && section.items.map((item, i) => (
-                     <p key={i} style={{ fontSize: '0.95rem', color: '#334155', fontWeight: 500, lineHeight: '1.7', margin: '0 0 0.5rem 0', paddingLeft: '0.5rem', borderLeft: '2px solid #e2e8f0' }}>{item}</p>
+                     <p key={i} style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', fontWeight: 500, lineHeight: '1.7', margin: '0 0 0.5rem 0', paddingLeft: '0.5rem', borderLeft: '2px solid #e2e8f0' }}>{item}</p>
                    ))}
                    {section.links && (
                      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -791,7 +853,7 @@ export default function App() {
                           >
                             {usStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                           </Pie>
-                          <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.USD}${(val).toLocaleString()}`} contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                          <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.USD}${(val).toLocaleString()}`} contentStyle={CHART_TOOLTIP_STYLE} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -802,7 +864,7 @@ export default function App() {
                         return (
                           <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>
                               {e.name} - ${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)
                             </span>
                           </div>
@@ -839,7 +901,7 @@ export default function App() {
                           >
                             {twStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[(index + 4) % PIE_COLORS.length]} />)}
                           </Pie>
-                          <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.NTD}${(val).toLocaleString()}`} contentStyle={{ borderRadius: '12px', borderColor: '#e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
+                          <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.NTD}${(val).toLocaleString()}`} contentStyle={CHART_TOOLTIP_STYLE} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -850,7 +912,7 @@ export default function App() {
                         return (
                           <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[(index + 4) % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>
                               {e.name} - NT${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)
                             </span>
                           </div>
@@ -866,9 +928,9 @@ export default function App() {
       )}
 
       {/* UPDATE ASSET MODAL */}
-      <div className={`modal-overlay ${isModalOpen ? 'active' : ''}`}>
-        <div className="modal-content">
-          <h2 style={{ marginBottom: '1.25rem', color: '#0f172a' }}>Add / Update Ledger</h2>
+      <div className={`modal-overlay ${isModalOpen ? 'active' : ''}`} onClick={() => setIsModalOpen(false)} role="presentation">
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <h2 style={{ marginBottom: '1.25rem' }}>Add / Update Ledger</h2>
           <form onSubmit={handleAddAsset}>
             <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label>Date</label>
@@ -943,7 +1005,7 @@ export default function App() {
                 onChange={e => setFormData({...formData, isDebt: e.target.checked})}
                 style={{ width: '1.1rem', height: '1.1rem', accentColor: '#ef4444' }}
               />
-              <label htmlFor="isDebt" style={{ margin: 0, fontWeight: 500, color: formData.isDebt ? '#ef4444' : '#475569' }}>
+              <label htmlFor="isDebt" style={{ margin: 0, fontWeight: 500, color: formData.isDebt ? 'var(--danger)' : 'var(--text-tertiary)' }}>
                 This is a Liability / Debt (deducts from Net Equity)
               </label>
             </div>
@@ -972,25 +1034,132 @@ export default function App() {
 
 
 
+      {/* ADD LOAN MODAL */}
+      <div className={`modal-overlay ${isLoanModalOpen ? 'active' : ''}`} onClick={() => setIsLoanModalOpen(false)} role="presentation">
+        <div className="modal-content" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+          <h2 style={{ marginBottom: '0.5rem' }}>📉 Add Loan</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: '1.25rem' }}>
+            Stored on the <strong style={{ color: 'var(--accent-yellow)' }}>Loans</strong> sheet. Remaining balance is recalculated on each load (fixed-rate amortization). Portfolio ticker must match the <code style={{ color: 'var(--accent-yellow)' }}>Loan</code> row name (e.g. NTD Student Loan).
+          </p>
+          <form onSubmit={handleAddLoan}>
+            <div className="form-group">
+              <label>Display name</label>
+              <input
+                className="form-control"
+                placeholder="e.g. NTD Student Loan"
+                value={loanForm.loanName}
+                onChange={e => setLoanForm({ ...loanForm, loanName: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Portfolio ticker (unique)</label>
+              <input
+                className="form-control"
+                placeholder="Matches Portfolio Loan row — e.g. NTD Student Loan"
+                value={loanForm.portfolioTicker}
+                onChange={e => setLoanForm({ ...loanForm, portfolioTicker: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Original principal (NTD)</label>
+              <input
+                type="number"
+                className="form-control"
+                min="1"
+                step="1"
+                value={loanForm.principalNtd}
+                onChange={e => setLoanForm({ ...loanForm, principalNtd: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group" style={{ display: 'flex', gap: '1rem' }}>
+              <div style={{ flex: 1 }}>
+                <label>Annual interest rate (%)</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  min="0"
+                  step="0.01"
+                  value={loanForm.annualRatePct}
+                  onChange={e => setLoanForm({ ...loanForm, annualRatePct: e.target.value })}
+                  required
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Term (months)</label>
+                <input
+                  type="number"
+                  className="form-control"
+                  min="1"
+                  step="1"
+                  value={loanForm.termMonths}
+                  onChange={e => setLoanForm({ ...loanForm, termMonths: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>First payment / start month</label>
+              <input
+                type="date"
+                className="form-control"
+                value={loanForm.startDate}
+                onChange={e => setLoanForm({ ...loanForm, startDate: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Monthly payment (NTD, optional)</label>
+              <input
+                type="number"
+                className="form-control"
+                min="0"
+                step="1"
+                placeholder="Leave blank to use standard amortization payment"
+                value={loanForm.monthlyPaymentNtd}
+                onChange={e => setLoanForm({ ...loanForm, monthlyPaymentNtd: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>Notes (optional)</label>
+              <input
+                className="form-control"
+                value={loanForm.notes}
+                onChange={e => setLoanForm({ ...loanForm, notes: e.target.value })}
+              />
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setIsLoanModalOpen(false)}>Cancel</button>
+              <button type="submit" className="primary-btn" disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save loan'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       {/* EDIT CASH / ACCOUNTS MODAL */}
-      <div className={`modal-overlay ${isCashModalOpen ? 'active' : ''}`}>
-        <div className="modal-content">
-          <h2 style={{ marginBottom: '1.25rem', color: '#0f172a' }}>💰 Edit Cash & Account Balances</h2>
+      <div className={`modal-overlay ${isCashModalOpen ? 'active' : ''}`} onClick={() => setIsCashModalOpen(false)} role="presentation">
+        <div className="modal-content" onClick={e => e.stopPropagation()}>
+          <h2 style={{ marginBottom: '1.25rem' }}>💰 Edit Cash & Account Balances</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', marginBottom: '1rem' }}>
+            Loan balances are computed from the <strong style={{ color: 'var(--accent-yellow)' }}>Loans</strong> sheet (amortization). Use Add Loan to register a new facility or edit rows in the spreadsheet.
+          </p>
           <form onSubmit={handleSaveAllCash}>
             <div style={{ maxHeight: '400px', overflowY: 'auto', paddingRight: '0.5rem' }}>
               {cashAccounts.map(acct => {
                 const isNtd = acct.category.startsWith('NTD');
-                const isLoan = acct.category === 'Loan';
                 const currentVal = isNtd ? (Number(acct.ntdValue) || 0) : (Number(acct.usdValue) || 0);
                 const symbol = isNtd ? 'NT$' : '$';
                 return (
                   <div key={acct.ticker} className="form-group" style={{ marginBottom: '1rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <label style={{ margin: 0, fontWeight: 600, color: isLoan ? '#ef4444' : '#334155', fontSize: '0.9rem' }}>
-                        {isLoan ? '🔴' : '🏦'} {acct.ticker}
-                        <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: '0.5rem', fontSize: '0.8rem' }}>({acct.category})</span>
+                      <label style={{ margin: 0, fontWeight: 600, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                        🏦 {acct.ticker}
+                        <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, marginLeft: '0.5rem', fontSize: '0.8rem' }}>({acct.category})</span>
                       </label>
-                      <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#64748b' }}>
+                      <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-tertiary)' }}>
                         Current: {symbol}{Math.abs(currentVal).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                       </span>
                     </div>
@@ -1005,7 +1174,7 @@ export default function App() {
                 );
               })}
             </div>
-            <p style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '0.75rem' }}>Leave blank to keep current value. Only changed fields will be updated.</p>
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: '0.75rem' }}>Leave blank to keep current value. Only changed fields will be updated.</p>
             <div className="modal-actions">
               <button type="button" className="btn-secondary" onClick={() => setIsCashModalOpen(false)}>Cancel</button>
               <button type="submit" className="primary-btn" disabled={isSaving || Object.keys(cashEdits).filter(k => cashEdits[k] !== '').length === 0}>

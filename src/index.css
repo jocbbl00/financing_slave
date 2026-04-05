@@ -1,26 +1,32 @@
 :root {
-  /* Warm professional yellow: cream base + restrained gold accents */
-  --bg-dark: #faf6ed;
+  --bg-base: #0c0f14;
   --bg-gradient: linear-gradient(
-    155deg,
-    #fffdf8 0%,
-    #faf3dc 38%,
-    #f3e4b8 72%,
-    #e9d48c 100%
+    160deg,
+    #0c0f14 0%,
+    #121826 42%,
+    #1a1628 78%,
+    #1f1a0a 100%
   );
-  --text-primary: #0f172a;
-  --text-secondary: #334155;
-  --text-tertiary: #475569;
-  --accent-color: #0f172a; /* dark slate for buttons */
-  --accent-hover: #1e293b;
-  --success: #059669; /* green */
-  --warning: #d97706; /* dark amber */
-  --danger: #dc2626; /* red */
-  --glass-bg: rgba(255, 255, 255, 0.55);
-  --glass-border: rgba(255, 255, 255, 0.75);
-  --card-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.06);
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --accent-yellow: #eab308;
+  --accent-yellow-dim: #ca8a04;
+  --accent-color: #eab308;
+  --accent-hover: #facc15;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --glass-bg: rgba(30, 41, 59, 0.55);
+  --glass-border: rgba(234, 179, 8, 0.12);
+  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --font-family: 'Outfit', sans-serif;
+  --surface-deep: #0f172a;
+  --surface-input: #1e293b;
+  --surface-input-border: #334155;
+  --modal-bg: #151c2c;
+  --modal-border: rgba(234, 179, 8, 0.15);
 }
 
 * {
@@ -31,7 +37,7 @@
 
 body {
   font-family: var(--font-family);
-  background: var(--bg-dark);
+  background: var(--bg-base);
   background-image: var(--bg-gradient);
   background-attachment: fixed;
   color: var(--text-primary);
@@ -84,13 +90,12 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Hover lift only on devices with real hover — avoids transform on tap targets,
-   which breaks position:fixed “popped” cards (especially nested) on mobile. */
 @media (hover: hover) and (pointer: fine) {
   .glass-card:hover {
     transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.72);
-    box-shadow: 0 12px 40px 0 rgba(15, 23, 42, 0.08);
+    background: rgba(30, 41, 59, 0.72);
+    border-color: rgba(234, 179, 8, 0.22);
+    box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
   }
 }
 
@@ -106,7 +111,7 @@ header {
 
 header h1 {
   font-size: 2rem;
-  color: #0f172a;
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
   font-weight: 700;
 }
@@ -117,8 +122,8 @@ header p {
 }
 
 .primary-btn {
-  background: var(--accent-color);
-  color: white;
+  background: linear-gradient(135deg, #ca8a04 0%, #eab308 100%);
+  color: #0f172a;
   padding: 0.6rem 1.2rem;
   border-radius: 9999px;
   font-weight: 600;
@@ -126,23 +131,24 @@ header p {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  box-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.2);
+  box-shadow: 0 4px 14px 0 rgba(234, 179, 8, 0.25);
 }
 
 .primary-btn:hover {
-  background: var(--accent-hover);
+  background: linear-gradient(135deg, #eab308 0%, #fde047 100%);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.3);
+  box-shadow: 0 6px 20px rgba(234, 179, 8, 0.35);
 }
 
 .primary-btn.secondary {
-  background: #f8fafc;
-  color: #0f172a;
-  border: 1px solid #cbd5e1;
+  background: var(--surface-input);
+  color: var(--text-primary);
+  border: 1px solid var(--surface-input-border);
 }
 
 .primary-btn.secondary:hover {
-  background: #e2e8f0;
+  background: #334155;
+  border-color: rgba(234, 179, 8, 0.25);
 }
 
 /* Dashboard Grid */
@@ -193,7 +199,7 @@ header p {
 .progress-track {
   width: 100%;
   height: 8px;
-  background: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.35);
   border-radius: 9999px;
   overflow: hidden;
   position: relative;
@@ -203,7 +209,7 @@ header p {
   height: 100%;
   border-radius: 9999px;
   transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
-  background: var(--accent-color);
+  background: var(--accent-yellow);
 }
 
 .progress-target {
@@ -211,10 +217,10 @@ header p {
   top: 0;
   bottom: 0;
   width: 3px;
-  background: #facc15; /* marker */
+  background: var(--accent-yellow-dim);
   border-radius: 2px;
   z-index: 10;
-  box-shadow: 0 0 4px rgba(0,0,0,0.3);
+  box-shadow: 0 0 4px rgba(234, 179, 8, 0.5);
 }
 
 /* Advise/Insight Section */
@@ -251,8 +257,8 @@ header p {
 }
 
 .insight-icon {
-  background: rgba(15, 23, 42, 0.1);
-  color: var(--accent-color);
+  background: rgba(234, 179, 8, 0.12);
+  color: var(--accent-yellow);
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
@@ -270,7 +276,7 @@ header p {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.65);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -287,8 +293,8 @@ header p {
 }
 
 .modal-content {
-  background: #fff;
-  border: 1px solid var(--glass-border);
+  background: var(--modal-bg);
+  border: 1px solid var(--modal-border);
   border-radius: 20px;
   width: 90%;
   max-width: 450px;
@@ -297,7 +303,11 @@ header p {
   overflow-y: auto;
   transform: scale(0.9);
   transition: var(--transition);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.modal-content h2 {
+  color: var(--text-primary);
 }
 
 .modal-overlay.active .modal-content {
@@ -318,9 +328,9 @@ header p {
 
 .form-control {
   width: 100%;
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
-  color: #0f172a;
+  background: var(--surface-input);
+  border: 1px solid var(--surface-input-border);
+  color: var(--text-primary);
   padding: 0.6rem 0.85rem;
   border-radius: 10px;
   font-family: var(--font-family);
@@ -330,8 +340,12 @@ header p {
 
 .form-control:focus {
   outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
+  border-color: var(--accent-yellow);
+  box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.2);
+}
+
+.form-control::placeholder {
+  color: var(--text-tertiary);
 }
 
 .modal-actions {
@@ -351,13 +365,12 @@ header p {
 }
 
 .btn-secondary:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text-primary);
 }
 
 /* ========== RESPONSIVE ========== */
 
-/* Tablet */
 @media (max-width: 768px) {
   .app-container {
     padding: 1rem;
@@ -393,7 +406,6 @@ header p {
   }
 }
 
-/* Small Mobile */
 @media (max-width: 480px) {
   .app-container {
     padding: 0.75rem;
@@ -418,7 +430,6 @@ header p {
   }
 }
 
-/* Recharts: keep pie/line from clipping on small widths */
 .chart-wrap {
   width: 100%;
   min-width: 0;
@@ -429,6 +440,9 @@ header p {
   min-width: 0 !important;
 }
 
+.recharts-cartesian-grid line { stroke: #334155; opacity: 0.4; }
+.recharts-text { fill: var(--text-tertiary); }
+
 /* Popped Out Card Status */
 .popped-out-backdrop {
   position: fixed;
@@ -436,7 +450,7 @@ header p {
   min-height: 100vh;
   min-height: 100dvh;
   min-height: -webkit-fill-available;
-  background: rgba(15, 23, 42, 0.45);
+  background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 999;
@@ -464,17 +478,16 @@ header p {
   margin: 0 !important;
   transform: none !important;
   transition: none !important;
-  background: rgba(255, 253, 248, 0.94) !important;
-  border: 1px solid rgba(234, 212, 160, 0.55) !important;
-  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.2) !important;
+  background: rgba(21, 28, 44, 0.97) !important;
+  border: 1px solid rgba(234, 179, 8, 0.2) !important;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.55) !important;
 }
 
 .glass-card.popped-out:hover {
   transform: none !important;
-  background: rgba(255, 253, 248, 0.94) !important;
+  background: rgba(21, 28, 44, 0.97) !important;
 }
 
-/* Prevent parent glass-card from shifting when a child is popped out */
 .glass-card:has(.popped-out) {
   transform: none !important;
   transition: none !important;

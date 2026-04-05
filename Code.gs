@@ -1,8 +1,146 @@
 // Wealth Allocator - Google Apps Script Backend
 
+/** Full calendar months from start → as-of (inclusive of partial months by day rule). */
+function paymentMonthsElapsed_(startDate, asOfDate, termMonths) {
+  const s = new Date(startDate);
+  const a = new Date(asOfDate);
+  if (isNaN(s.getTime()) || isNaN(a.getTime())) return 0;
+  let k = (a.getFullYear() - s.getFullYear()) * 12 + (a.getMonth() - s.getMonth());
+  if (a.getDate() < s.getDate()) k -= 1;
+  const n = Math.floor(Number(termMonths) || 0);
+  return Math.max(0, Math.min(n, k));
+}
+
+/** Standard fixed-rate amortization: remaining principal after k payments. */
+function remainingBalanceNtd_(principal, annualRatePct, termMonths, paymentsMade) {
+  const n = Math.floor(Number(termMonths) || 0);
+  const P = Number(principal);
+  if (n <= 0 || P <= 0) return 0;
+  const k = Math.min(n, Math.max(0, Math.floor(paymentsMade)));
+  const r = Number(annualRatePct) / 100 / 12;
+  if (r <= 0) return Math.max(0, P - (P / n) * k);
+  const A = Math.pow(1 + r, n);
+  if (Math.abs(A - 1) < 1e-14) return Math.max(0, P - (P / n) * k);
+  return P * (A - Math.pow(1 + r, k)) / (A - 1);
+}
+
+function monthlyPaymentNtd_(principal, annualRatePct, termMonths) {
+  const n = Math.floor(Number(termMonths) || 0);
+  const P = Number(principal);
+  if (n <= 0 || P <= 0) return 0;
+  const r = Number(annualRatePct) / 100 / 12;
+  if (r <= 0) return P / n;
+  const A = Math.pow(1 + r, n);
+  return P * r * A / (A - 1);
+}
+
+function ensureLoansSheet_(spreadsheet) {
+  let sh = spreadsheet.getSheetByName('Loans');
+  if (!sh) {
+    sh = spreadsheet.insertSheet('Loans');
+    sh.getRange(1, 1, 1, 8).setValues([[
+      'LoanName', 'PortfolioTicker', 'PrincipalNtd', 'AnnualRatePct', 'TermMonths', 'StartDate', 'MonthlyPaymentNtd', 'Notes'
+    ]]);
+    sh.getRange(1, 1, 1, 8).setFontWeight('bold');
+    for (let c = 1; c <= 8; c++) sh.autoResizeColumn(c);
+    // Calibrated: NT$61,705/mo, balance NT$3,677,746 Apr 2026 → ~2.1% APR, P≈NT$12.08M, 240 mo, start 2011-07
+    sh.appendRow([
+      'NTD Student Loan',
+      'NTD Student Loan',
+      12084039,
+      2.1,
+      240,
+      new Date(2011, 6, 1),
+      61705,
+      'Reverse-engineered from Apr 2026 snapshot (61,705/mo, 3,677,746 remaining, 20y term)'
+    ]);
+  }
+  return sh;
+}
+
+function readLoansForApi_(loansSheet) {
+  const last = loansSheet.getLastRow();
+  if (last < 2) return [];
+  const rows = loansSheet.getRange(2, 1, last, 8).getValues();
+  const asOf = new Date();
+  return rows.filter(function (r) { return r[0] && r[1]; }).map(function (r) {
+    var principal = Number(r[2]) || 0;
+    var rate = Number(r[3]) || 0;
+    var term = Number(r[4]) || 0;
+    var start = r[5] instanceof Date ? r[5] : new Date(r[5]);
+    var overrideM = (r[6] !== '' && r[6] != null && !isNaN(Number(r[6]))) ? Number(r[6]) : null;
+    var k = paymentMonthsElapsed_(start, asOf, term);
+    var bal = remainingBalanceNtd_(principal, rate, term, k);
+    var m = overrideM != null ? overrideM : monthlyPaymentNtd_(principal, rate, term);
+    return {
+      loanName: r[0],
+      portfolioTicker: r[1],
+      principalNtd: principal,
+      annualRatePct: rate,
+      termMonths: term,
+      startDate: Utilities.formatDate(start, Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+      monthlyPaymentNtd: Math.round(m * 100) / 100,
+      remainingNtd: Math.round(bal * 100) / 100,
+      paymentsApplied: k,
+      notes: r[7] || ''
+    };
+  });
+}
+
+/** Writes computed loan balances into Portfolio (Loan rows). */
+function syncLoansToPortfolio_(spreadsheet) {
+  var portfolioSheet = spreadsheet.getSheetByName('Portfolio');
+  if (!portfolioSheet) return;
+  var loansSheet = ensureLoansSheet_(spreadsheet);
+  var last = loansSheet.getLastRow();
+  if (last < 2) return;
+  var data = loansSheet.getRange(2, 1, last, 8).getValues();
+  var asOf = new Date();
+
+  for (var ri = 0; ri < data.length; ri++) {
+    var row = data[ri];
+    if (!row[0] || !row[1]) continue;
+    var ticker = String(row[1]).trim();
+    var principal = Number(row[2]) || 0;
+    var rate = Number(row[3]) || 0;
+    var term = Number(row[4]) || 0;
+    var start = row[5] instanceof Date ? row[5] : new Date(row[5]);
+    var k = paymentMonthsElapsed_(start, asOf, term);
+    var bal = remainingBalanceNtd_(principal, rate, term, k);
+
+    var pLast = portfolioSheet.getLastRow();
+    var found = false;
+    if (pLast >= 2) {
+      var pData = portfolioSheet.getRange(2, 1, pLast, 2).getValues();
+      for (var i = 0; i < pData.length; i++) {
+        if (pData[i][0] === 'Loan' && String(pData[i][1]).trim() === ticker) {
+          var rowIdx = i + 2;
+          portfolioSheet.getRange(rowIdx, 5).setValue(-Math.abs(bal));
+          portfolioSheet.getRange(rowIdx, 4).setFormula('=E' + rowIdx + '/32');
+          portfolioSheet.getRange(rowIdx, 3).setValue('');
+          found = true;
+          break;
+        }
+      }
+    }
+    if (!found) {
+      var newRow = pLast < 2 ? 2 : pLast + 1;
+      portfolioSheet.getRange(newRow, 1).setValue('Loan');
+      portfolioSheet.getRange(newRow, 2).setValue(ticker);
+      portfolioSheet.getRange(newRow, 3).setValue('');
+      portfolioSheet.getRange(newRow, 5).setValue(-Math.abs(bal));
+      portfolioSheet.getRange(newRow, 4).setFormula('=E' + newRow + '/32');
+    }
+  }
+}
+
 function doGet(e) {
   const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  syncLoansToPortfolio_(spreadsheet);
+  const loansSheet = spreadsheet.getSheetByName('Loans');
+  const loansApi = loansSheet ? readLoansForApi_(loansSheet) : [];
+
   const txSheet = spreadsheet.getSheetByName('Transactions');
   const portfolioSheet = spreadsheet.getSheetByName('Portfolio');
   
@@ -123,7 +261,8 @@ function doGet(e) {
     data: overviewData,
     portfolio: portfolio,
     history: historyData,
-    transactions: txData
+    transactions: txData,
+    loans: loansApi
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -213,6 +352,35 @@ function doPost(e) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
   
+  // ===== ADD LOAN: Append Loans sheet + sync Portfolio balance from amortization =====
+  if (requestData.action === 'add_loan') {
+    const loanName = requestData.loanName || requestData.portfolioTicker || 'Loan';
+    const portfolioTicker = requestData.portfolioTicker || loanName;
+    const principalNtd = Number(requestData.principalNtd);
+    const annualRatePct = Number(requestData.annualRatePct);
+    const termMonths = Math.floor(Number(requestData.termMonths));
+    const startDate = requestData.startDate ? new Date(requestData.startDate) : new Date();
+    const monthlyPaymentNtd = requestData.monthlyPaymentNtd !== undefined && requestData.monthlyPaymentNtd !== ''
+      ? Number(requestData.monthlyPaymentNtd) : '';
+    const notes = requestData.notes || '';
+
+    if (!portfolioTicker || !principalNtd || principalNtd <= 0 || !termMonths || termMonths <= 0) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'error',
+        message: 'Invalid loan: need portfolioTicker, positive principalNtd, and termMonths'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    const sh = ensureLoansSheet_(spreadsheet);
+    sh.appendRow([loanName, portfolioTicker, principalNtd, annualRatePct, termMonths, startDate, monthlyPaymentNtd, notes]);
+    syncLoansToPortfolio_(spreadsheet);
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success',
+      message: 'Loan added and portfolio balance updated'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
   // ===== UPDATE CASH: Update a specific cash/preferred/debt account amount =====
   if (requestData.action === 'update_cash') {
     const { ticker, amount, currency } = requestData; // ticker = account name, amount = new balance
@@ -227,6 +395,12 @@ function doPost(e) {
     let found = false;
     for (let i = 0; i < data.length; i++) {
       if (data[i][1] === ticker) { // match by ticker/account name
+        if (data[i][0] === 'Loan') {
+          return ContentService.createTextOutput(JSON.stringify({
+            status: 'error',
+            message: 'Loan balances are computed from the Loans sheet. Use Add Loan or edit the Loans tab.'
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
         found = true;
         const rowIdx = i + 2;
         if (currency === 'USD' || data[i][0].startsWith('USD')) {
