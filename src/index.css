@@ -1,6 +1,13 @@
 :root {
-  --bg-dark: #fef08a; /* soft yellow */
-  --bg-gradient: linear-gradient(135deg, #fef08a 0%, #facc15 100%);
+  /* Warm professional yellow: cream base + restrained gold accents */
+  --bg-dark: #faf6ed;
+  --bg-gradient: linear-gradient(
+    155deg,
+    #fffdf8 0%,
+    #faf3dc 38%,
+    #f3e4b8 72%,
+    #e9d48c 100%
+  );
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-tertiary: #475569;
@@ -9,9 +16,9 @@
   --success: #059669; /* green */
   --warning: #d97706; /* dark amber */
   --danger: #dc2626; /* red */
-  --glass-bg: rgba(255, 255, 255, 0.5);
-  --glass-border: rgba(255, 255, 255, 0.6);
-  --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(255, 255, 255, 0.75);
+  --card-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.06);
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --font-family: 'Outfit', sans-serif;
 }
@@ -26,8 +33,10 @@ body {
   font-family: var(--font-family);
   background: var(--bg-dark);
   background-image: var(--bg-gradient);
+  background-attachment: fixed;
   color: var(--text-primary);
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -72,11 +81,17 @@ button {
   padding: 2rem;
   box-shadow: var(--card-shadow);
   transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
 }
 
-.glass-card:hover {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.6);
+/* Hover lift only on devices with real hover — avoids transform on tap targets,
+   which breaks position:fixed “popped” cards (especially nested) on mobile. */
+@media (hover: hover) and (pointer: fine) {
+  .glass-card:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.72);
+    box-shadow: 0 12px 40px 0 rgba(15, 23, 42, 0.08);
+  }
 }
 
 /* Header */
@@ -403,38 +418,60 @@ header p {
   }
 }
 
+/* Recharts: keep pie/line from clipping on small widths */
+.chart-wrap {
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+}
+
+.recharts-responsive-container {
+  min-width: 0 !important;
+}
+
 /* Popped Out Card Status */
 .popped-out-backdrop {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
+  inset: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 999;
   cursor: pointer;
+  touch-action: manipulation;
   animation: fadeIn 0.3s;
 }
 
 .glass-card.popped-out {
   position: fixed !important;
-  top: 5vh !important;
-  bottom: 5vh !important;
-  left: 5vw !important;
-  right: 5vw !important;
+  top: max(0.75rem, env(safe-area-inset-top, 0px)) !important;
+  bottom: max(0.75rem, env(safe-area-inset-bottom, 0px)) !important;
+  left: max(0.75rem, env(safe-area-inset-left, 0px)) !important;
+  right: max(0.75rem, env(safe-area-inset-right, 0px)) !important;
   width: auto !important;
-  height: auto !important;
+  max-height: calc(100vh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+  max-height: calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
   max-width: none !important;
   z-index: 1000 !important;
+  overflow-x: hidden !important;
   overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   cursor: default !important;
   margin: 0 !important;
   transform: none !important;
   transition: none !important;
-  background: rgba(254, 240, 138, 0.95) !important;
+  background: rgba(255, 253, 248, 0.94) !important;
+  border: 1px solid rgba(234, 212, 160, 0.55) !important;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.2) !important;
 }
 
 .glass-card.popped-out:hover {
   transform: none !important;
-  background: rgba(254, 240, 138, 0.95) !important;
+  background: rgba(255, 253, 248, 0.94) !important;
 }
 
 /* Prevent parent glass-card from shifting when a child is popped out */

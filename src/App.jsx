@@ -2,6 +2,25 @@ import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import './index.css';
 
+function useViewport() {
+  const [state, setState] = useState(() => ({
+    narrow: typeof window !== 'undefined' ? window.matchMedia('(max-width: 768px)').matches : false,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800,
+  }));
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const sync = () => setState({ narrow: mq.matches, height: window.innerHeight });
+    mq.addEventListener('change', sync);
+    window.addEventListener('resize', sync);
+    sync();
+    return () => {
+      mq.removeEventListener('change', sync);
+      window.removeEventListener('resize', sync);
+    };
+  }, []);
+  return state;
+}
+
 const API_URL = 'https://script.google.com/macros/s/AKfycbyfNl53aUdseOlPdl-6ffWlZotHqwQmw6tPZJCMO8veRLnUWVaGNasy4jLCNdhkAexf0w/exec';
 
 const PIE_COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#0ea5e9', '#facc15', '#64748b'];
@@ -43,10 +62,26 @@ export default function App() {
   const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', type: 'Buy', price: '', isDebt: false });
   const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
-  
+  const { narrow: isNarrow, height: viewportH } = useViewport();
+  const poppedChartHeight = isNarrow ? Math.min(400, Math.round(viewportH * 0.52)) : 500;
+  const collapsedChartHeight = isNarrow ? 260 : 250;
+  const pieRadii = (popped) =>
+    popped
+      ? { inner: isNarrow ? '28%' : '32%', outer: isNarrow ? '46%' : '52%' }
+      : { inner: isNarrow ? '36%' : '40%', outer: isNarrow ? '56%' : '68%' };
+
   useEffect(() => {
     fetchPortfolio();
   }, []);
+
+  useEffect(() => {
+    if (!poppedCard) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setPoppedCard(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [poppedCard]);
 
   const fetchPortfolio = async () => {
     try {
@@ -355,7 +390,7 @@ export default function App() {
 
   return (
     <div className="app-container">
-      {poppedCard && <div className="popped-out-backdrop" onClick={() => setPoppedCard(null)}></div>}
+      {poppedCard && <div className="popped-out-backdrop" onClick={() => setPoppedCard(null)} />}
       <header>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <img src="/favicon.jpg" alt="icon" style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} />
@@ -465,8 +500,8 @@ export default function App() {
               ))}
             </div>
           {displayChartData.length > 0 ? (
-             <div style={{ width: '100%', height: poppedCard === 'history' ? '70vh' : '280px' }}>
-                <ResponsiveContainer>
+             <div className="chart-wrap" style={{ width: '100%', height: poppedCard === 'history' ? (isNarrow ? Math.min(380, Math.round(viewportH * 0.55)) : Math.round(viewportH * 0.65)) : 280 }}>
+                <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={displayChartData}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="name" stroke="#64748b" />
@@ -493,9 +528,9 @@ export default function App() {
             <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'distribution' ? '✕' : '⤢'}</span>
           </div>
           
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'distribution' ? 'column' : 'row' }}>
-            <div style={{ flex: '1 1 200px', minHeight: poppedCard === 'distribution' ? '500px' : '250px', width: '100%' }}>
-              <ResponsiveContainer width="100%" height={poppedCard === 'distribution' ? 500 : 250}>
+          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'distribution' || isNarrow ? 'column' : 'row' }}>
+            <div className="chart-wrap" style={{ flex: '1 1 auto', minWidth: 0, width: '100%', minHeight: poppedCard === 'distribution' ? poppedChartHeight : collapsedChartHeight }}>
+              <ResponsiveContainer width="100%" height={poppedCard === 'distribution' ? poppedChartHeight : collapsedChartHeight}>
                 <PieChart>
                   <Pie 
                     data={pieData} 
@@ -503,8 +538,8 @@ export default function App() {
                     nameKey="name" 
                     cx="50%" 
                     cy="50%" 
-                    innerRadius={poppedCard === 'distribution' ? 100 : 50} 
-                    outerRadius={poppedCard === 'distribution' ? 180 : 85} 
+                    innerRadius={pieRadii(poppedCard === 'distribution').inner}
+                    outerRadius={pieRadii(poppedCard === 'distribution').outer}
                     paddingAngle={4}
                     label={poppedCard === 'distribution' ? ({ name, percent }) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(0)}%` : '' : false}
                   >
@@ -523,7 +558,7 @@ export default function App() {
               {pieData.map((entry, index) => (
                 <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: entry.fill || PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>{entry.name}</span>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>{entry.name}</span>
                 </div>
               ))}
             </div>
@@ -736,9 +771,9 @@ export default function App() {
                   <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'us' ? '✕' : '⤢'}</span>
                 </div>
                 {usStocksData.length > 0 ? (
-                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'us' ? 'column' : 'row' }}>
-                    <div style={{ flex: '1 1 200px', minHeight: poppedCard === 'us' ? '500px' : '250px', width: '100%' }}>
-                      <ResponsiveContainer width="100%" height={poppedCard === 'us' ? 500 : 250}>
+                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'us' || isNarrow ? 'column' : 'row' }}>
+                    <div className="chart-wrap" style={{ flex: '1 1 auto', minWidth: 0, width: '100%', minHeight: poppedCard === 'us' ? poppedChartHeight : collapsedChartHeight }}>
+                      <ResponsiveContainer width="100%" height={poppedCard === 'us' ? poppedChartHeight : collapsedChartHeight}>
                         <PieChart>
                           <Pie 
                             data={usStocksData} 
@@ -746,8 +781,8 @@ export default function App() {
                             nameKey="name" 
                             cx="50%" 
                             cy="50%" 
-                            innerRadius={poppedCard === 'us' ? 100 : 40} 
-                            outerRadius={poppedCard === 'us' ? 180 : 80} 
+                            innerRadius={pieRadii(poppedCard === 'us').inner}
+                            outerRadius={pieRadii(poppedCard === 'us').outer}
                             paddingAngle={4}
                             label={poppedCard === 'us' ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
                             isAnimationActive={false}
@@ -767,7 +802,7 @@ export default function App() {
                         return (
                           <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>
                               {e.name} - ${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)
                             </span>
                           </div>
@@ -784,9 +819,9 @@ export default function App() {
                   <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'tw' ? '✕' : '⤢'}</span>
                 </div>
                 {twStocksData.length > 0 ? (
-                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'tw' ? 'column' : 'row' }}>
-                    <div style={{ flex: '1 1 200px', minHeight: poppedCard === 'tw' ? '500px' : '250px', width: '100%' }}>
-                      <ResponsiveContainer width="100%" height={poppedCard === 'tw' ? 500 : 250}>
+                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'tw' || isNarrow ? 'column' : 'row' }}>
+                    <div className="chart-wrap" style={{ flex: '1 1 auto', minWidth: 0, width: '100%', minHeight: poppedCard === 'tw' ? poppedChartHeight : collapsedChartHeight }}>
+                      <ResponsiveContainer width="100%" height={poppedCard === 'tw' ? poppedChartHeight : collapsedChartHeight}>
                         <PieChart>
                           <Pie 
                             data={twStocksData} 
@@ -794,8 +829,8 @@ export default function App() {
                             nameKey="name" 
                             cx="50%" 
                             cy="50%" 
-                            innerRadius={poppedCard === 'tw' ? 100 : 40} 
-                            outerRadius={poppedCard === 'tw' ? 180 : 80} 
+                            innerRadius={pieRadii(poppedCard === 'tw').inner}
+                            outerRadius={pieRadii(poppedCard === 'tw').outer}
                             paddingAngle={4}
                             label={poppedCard === 'tw' ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
                             isAnimationActive={false}
@@ -815,7 +850,7 @@ export default function App() {
                         return (
                           <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[(index + 4) % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>
                               {e.name} - NT${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)
                             </span>
                           </div>
