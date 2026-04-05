@@ -9,7 +9,7 @@
   );
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
-  --text-tertiary: #94a3b8;
+  --text-tertiary: #a8b8cc;
   --accent-yellow: #eab308;
   --accent-yellow-dim: #ca8a04;
   --accent-color: #eab308;
@@ -428,6 +428,30 @@ header p {
     flex-direction: column;
     gap: 0.25rem;
   }
+}
+
+/* Slim scrollbars inside cards (avoids harsh system white bars on dark UI) */
+.card-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(234, 179, 8, 0.45) rgba(15, 23, 42, 0.5);
+}
+
+.card-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-scroll::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: 6px;
+}
+
+.card-scroll::-webkit-scrollbar-thumb {
+  background: rgba(234, 179, 8, 0.4);
+  border-radius: 6px;
+}
+
+.card-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(234, 179, 8, 0.6);
 }
 
 .chart-wrap {

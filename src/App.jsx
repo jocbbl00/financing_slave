@@ -500,13 +500,13 @@ export default function App() {
       <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
         <div className="glass-card stat-card" style={{ borderTop: '4px solid #10b981' }}>
           <div className="stat-label">Net Equity</div>
-          <div className="stat-value" style={{ color: '#059669' }}>{fmt(historyData.length > 0 ? historyData[historyData.length - 1].net : totalUsdNet)}</div>
+          <div className="stat-value" style={{ color: 'var(--success)' }}>{fmt(historyData.length > 0 ? historyData[historyData.length - 1].net : totalUsdNet)}</div>
         </div>
 
         <div className="glass-card stat-card">
           <div className="stat-label">Total Assets</div>
           <div className="stat-value">{fmt(historyData.length > 0 ? historyData[historyData.length - 1].gross : totalUsdGross)}</div>
-          <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.25rem' }}>= Equity + Debt</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>= Equity + Debt</div>
         </div>
         
         <div className="glass-card stat-card" style={{ borderTop: '4px solid #ef4444' }}>
@@ -587,7 +587,7 @@ export default function App() {
         <div className={`glass-card ${poppedCard === 'distribution' ? 'popped-out' : ''}`}>
           <div onClick={() => setPoppedCard(p => p === 'distribution' ? null : 'distribution')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
             <h2 style={{ fontWeight: 600, margin: 0 }}>Total Value Distribution</h2>
-            <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'distribution' ? '✕' : '⤢'}</span>
+            <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'distribution' ? '✕' : '⤢'}</span>
           </div>
           
           <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'distribution' || isNarrow ? 'column' : 'row' }}>
@@ -632,16 +632,16 @@ export default function App() {
         <div className={`glass-card ${poppedCard === 'allocation' ? 'popped-out' : ''}`}>
           <div onClick={() => setPoppedCard(p => p === 'allocation' ? null : 'allocation')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1.5rem' }}>
             <h2 style={{ fontWeight: 600, margin: 0 }}>Asset Allocation</h2>
-            <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'allocation' ? '✕' : '⤢'}</span>
+            <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'allocation' ? '✕' : '⤢'}</span>
           </div>
           
-          <div style={{ maxHeight: poppedCard === 'allocation' ? 'none' : '300px', overflowY: 'auto', paddingRight: '1rem' }}>
+          <div className="card-scroll" style={{ maxHeight: poppedCard === 'allocation' ? 'none' : '300px', overflowY: 'auto', paddingRight: '0.5rem' }}>
             {enrichedPortfolio.map((asset) => (
                <div key={asset.category} className="allocation-item">
                  <div className="allocation-header">
-                   <span style={{ fontWeight: '700', color: asset.amount < 0 ? '#ef4444' : '#0f172a' }}>{asset.category} {asset.amount < 0 && '(Liability)'}</span>
+                   <span style={{ fontWeight: '700', color: asset.amount < 0 ? 'var(--danger)' : 'var(--text-primary)' }}>{asset.category} {asset.amount < 0 && '(Liability)'}</span>
                    {asset.amount > 0 && (
-                     <span style={{ color: '#475569', fontWeight: '600', fontSize: '0.9rem' }}>
+                     <span style={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '0.9rem' }}>
                         {(asset.percentage || 0).toFixed(1)}%
                      </span>
                    )}
@@ -650,11 +650,11 @@ export default function App() {
                    <div className="progress-track" style={{ height: '6px' }}>
                      <div 
                        className="progress-fill" 
-                       style={{ width: `${Math.min(100, asset.percentage || 0)}%`, background: '#059669' }}
+                       style={{ width: `${Math.min(100, asset.percentage || 0)}%`, background: 'var(--success)' }}
                      ></div>
                    </div>
                  )}
-                 <div style={{ marginTop: '0.5rem', fontSize: '0.95rem', color: '#475569', display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                 <div style={{ marginTop: '0.5rem', fontSize: '0.95rem', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
                     <span>{fmt(asset.currentUsd)}</span>
                  </div>
                </div>
@@ -666,7 +666,7 @@ export default function App() {
         <div className={`glass-card ${poppedCard === 'roi' ? 'popped-out' : ''}`}>
           <div onClick={() => setPoppedCard(p => p === 'roi' ? null : 'roi')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1.5rem' }}>
             <h2 style={{ fontWeight: 600, margin: 0 }}>📈 ROI Tracking</h2>
-            <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'roi' ? '✕' : '⤢'}</span>
+            <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'roi' ? '✕' : '⤢'}</span>
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
@@ -675,9 +675,9 @@ export default function App() {
               style={{
                 flex: 1,
                 padding: '0.4rem',
-                border: 'none',
-                background: roiTab === 'US' ? '#3b82f6' : '#e2e8f0',
-                color: roiTab === 'US' ? '#fff' : '#475569',
+                background: roiTab === 'US' ? '#3b82f6' : 'rgba(30, 41, 59, 0.85)',
+                color: roiTab === 'US' ? '#fff' : 'var(--text-secondary)',
+                border: roiTab === 'US' ? '1px solid transparent' : '1px solid rgba(148, 163, 184, 0.25)',
                 borderRadius: '8px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -689,9 +689,9 @@ export default function App() {
               style={{
                 flex: 1,
                 padding: '0.4rem',
-                border: 'none',
-                background: roiTab === 'TW' ? '#10b981' : '#e2e8f0',
-                color: roiTab === 'TW' ? '#fff' : '#475569',
+                background: roiTab === 'TW' ? '#10b981' : 'rgba(30, 41, 59, 0.85)',
+                color: roiTab === 'TW' ? '#fff' : 'var(--text-secondary)',
+                border: roiTab === 'TW' ? '1px solid transparent' : '1px solid rgba(148, 163, 184, 0.25)',
                 borderRadius: '8px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -700,13 +700,13 @@ export default function App() {
             >🇹🇼 TW</button>
           </div>
           
-          <div style={{ maxHeight: poppedCard === 'roi' ? 'none' : '300px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+          <div className="card-scroll" style={{ maxHeight: poppedCard === 'roi' ? 'none' : '300px', overflowY: 'auto', paddingRight: '0.5rem' }}>
              {portfolioItems.filter(i => {
                 const targetCategory = roiTab === 'US' ? 'USD Stock' : 'NTD Stock';
                 const isTarget = i.category === targetCategory || (targetCategory === 'NTD Stock' && i.category === 'NTD Preferred');
                 return isTarget && Number(i.usdValue) !== 0;
              }).length === 0 && (
-                <p style={{ color: '#64748b', fontSize: '0.9rem', textAlign: 'center', marginTop: '1rem' }}>No {roiTab} stocks to track.</p>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem', textAlign: 'center', marginTop: '1rem' }}>No {roiTab} stocks to track.</p>
              )}
              {portfolioItems.filter(i => {
                 const targetCategory = roiTab === 'US' ? 'USD Stock' : 'NTD Stock';
@@ -725,16 +725,16 @@ export default function App() {
                const isPositive = roi >= 0;
                
                return (
-                 <div key={item.ticker} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid #e2e8f0', alignItems: 'center' }}>
+                 <div key={item.ticker} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid rgba(148, 163, 184, 0.2)', alignItems: 'center' }}>
                    <div>
-                     <strong style={{ fontSize: '1rem', color: '#1e293b' }}>{tickerLabel(item.ticker)}</strong>
-                     <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.1rem' }}>Qty: {qty}</div>
+                     <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{tickerLabel(item.ticker)}</strong>
+                     <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: '0.1rem' }}>Qty: {qty}</div>
                    </div>
                    <div style={{ textAlign: 'right' }}>
-                     <div style={{ color: isPositive ? '#10b981' : '#ef4444', fontWeight: 700, fontSize: '1.1rem' }}>
+                     <div style={{ color: isPositive ? 'var(--success)' : 'var(--danger)', fontWeight: 700, fontSize: '1.1rem' }}>
                        {histPrice > 0 ? `${isPositive ? '+' : ''}${roi.toFixed(2)}%` : 'TBD'}
                      </div>
-                     <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.1rem' }}>
+                     <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.1rem' }}>
                        {isNtd ? 'NT$' : '$'}{currentPrice.toFixed(2)} / {histPrice > 0 ? `${isNtd ? 'NT$' : '$'}${histPrice.toFixed(2)}` : 'Wait'}
                      </div>
                    </div>
@@ -751,29 +751,31 @@ export default function App() {
         <div className="dashboard-grid">
           <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
             <h2 style={{ fontWeight: 600, marginBottom: '1rem' }}>💡 Investment Suggestions</h2>
-            <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '1.5rem' }}>AI-driven analysis based on your current holdings and market conditions. Refreshes daily.</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.55 }}>
+              Templates personalize with your holdings. The app picks <strong style={{ color: 'var(--accent-yellow)' }}>one of three variants</strong> based on the <strong style={{ color: 'var(--accent-yellow)' }}>UTC calendar day</strong> (changes at midnight UTC, not a live AI feed). Reload the page anytime to reflect the current day.
+            </p>
             <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-              <div style={{ flex: '1', background: 'rgba(16, 185, 129, 0.1)', padding: '1.5rem', borderRadius: '12px', borderLeft: '4px solid #10b981', minWidth: '280px' }}>
-                <h3 style={{ color: '#059669', marginBottom: '1rem' }}>🛒 Buy / Accumulate</h3>
+              <div style={{ flex: '1', background: 'rgba(16, 185, 129, 0.12)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(52, 211, 153, 0.25)', borderLeft: '4px solid #34d399', minWidth: '280px' }}>
+                <h3 style={{ color: '#6ee7b7', marginBottom: '1rem' }}>🛒 Buy / Accumulate</h3>
                 {suggestions.buys.map((s, i) => (
-                  <div key={i} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: i < suggestions.buys.length - 1 ? '1px solid rgba(16,185,129,0.2)' : 'none' }}>
+                  <div key={i} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: i < suggestions.buys.length - 1 ? '1px solid rgba(52, 211, 153, 0.2)' : 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                      <span style={{ background: s.action === 'BUY' ? '#059669' : '#f59e0b', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>{s.action}</span>
-                      <strong style={{ color: '#064e3b', fontSize: '1rem' }}>{s.ticker}</strong>
+                      <span style={{ background: s.action === 'BUY' ? '#059669' : '#d97706', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>{s.action}</span>
+                      <strong style={{ color: '#ecfdf5', fontSize: '1rem' }}>{s.ticker}</strong>
                     </div>
-                    <p style={{ color: '#064e3b', fontSize: '0.85rem', lineHeight: '1.6', margin: 0 }}>{s.reason}</p>
+                    <p style={{ color: '#d1fae5', fontSize: '0.85rem', lineHeight: '1.6', margin: 0 }}>{s.reason}</p>
                   </div>
                 ))}
               </div>
-              <div style={{ flex: '1', background: 'rgba(239, 68, 68, 0.1)', padding: '1.5rem', borderRadius: '12px', borderLeft: '4px solid #ef4444', minWidth: '280px' }}>
-                <h3 style={{ color: '#b91c1c', marginBottom: '1rem' }}>📉 Sell / Trim</h3>
+              <div style={{ flex: '1', background: 'rgba(239, 68, 68, 0.1)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(248, 113, 113, 0.25)', borderLeft: '4px solid #f87171', minWidth: '280px' }}>
+                <h3 style={{ color: '#fca5a5', marginBottom: '1rem' }}>📉 Sell / Trim</h3>
                 {suggestions.sells.map((s, i) => (
-                  <div key={i} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: i < suggestions.sells.length - 1 ? '1px solid rgba(239,68,68,0.2)' : 'none' }}>
+                  <div key={i} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: i < suggestions.sells.length - 1 ? '1px solid rgba(248, 113, 113, 0.2)' : 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                      <span style={{ background: s.action === 'SELL' ? '#dc2626' : '#f59e0b', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>{s.action}</span>
-                      <strong style={{ color: '#7f1d1d', fontSize: '1rem' }}>{s.ticker}</strong>
+                      <span style={{ background: s.action === 'SELL' ? '#dc2626' : '#d97706', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>{s.action}</span>
+                      <strong style={{ color: '#fef2f2', fontSize: '1rem' }}>{s.ticker}</strong>
                     </div>
-                    <p style={{ color: '#7f1d1d', fontSize: '0.85rem', lineHeight: '1.6', margin: 0 }}>{s.reason}</p>
+                    <p style={{ color: '#fecaca', fontSize: '0.85rem', lineHeight: '1.6', margin: 0 }}>{s.reason}</p>
                   </div>
                 ))}
               </div>
@@ -783,17 +785,17 @@ export default function App() {
           <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h2 style={{ fontWeight: 600 }}>🤖 AI Portfolio & Market Advisor</h2>
-              <span style={{ fontSize: '0.85rem', color: '#475569', background: '#e2e8f0', padding: '0.25rem 0.5rem', borderRadius: '12px' }}>Auto-Renewed Today</span>
+              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'rgba(30, 41, 59, 0.9)', border: '1px solid rgba(234, 179, 8, 0.2)', padding: '0.25rem 0.5rem', borderRadius: '12px' }}>Variant tied to UTC day</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
               {advice.map((section, idx) => (
-                 <div key={idx} style={{ background: 'rgba(255, 255, 255, 0.5)', padding: '1.25rem 1.5rem', borderRadius: '16px', borderLeft: `6px solid ${section.color}` }}>
+                 <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.65)', padding: '1.25rem 1.5rem', borderRadius: '16px', border: '1px solid rgba(148, 163, 184, 0.2)', borderLeft: `6px solid ${section.color}` }}>
                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
                      <span style={{ fontSize: '1.3rem' }}>{section.icon}</span>
-                     <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#0f172a', fontWeight: '700' }}>{section.title}</h3>
+                     <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-primary)', fontWeight: '700' }}>{section.title}</h3>
                    </div>
                    {section.items && section.items.map((item, i) => (
-                     <p key={i} style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', fontWeight: 500, lineHeight: '1.7', margin: '0 0 0.5rem 0', paddingLeft: '0.5rem', borderLeft: '2px solid #e2e8f0' }}>{item}</p>
+                     <p key={i} style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', fontWeight: 500, lineHeight: '1.7', margin: '0 0 0.5rem 0', paddingLeft: '0.5rem', borderLeft: '2px solid rgba(148, 163, 184, 0.35)' }}>{item}</p>
                    ))}
                    {section.links && (
                      <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -803,12 +805,12 @@ export default function App() {
                              href={link.url} 
                              target="_blank" 
                              rel="noopener noreferrer" 
-                             style={{ color: '#2563eb', fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                             style={{ color: '#93c5fd', fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                            >
                              🔗 {link.text}
                            </a>
                            {link.summary && (
-                             <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '0.25rem 0 0 1.5rem', lineHeight: '1.5', fontWeight: 400 }}>{link.summary}</p>
+                             <p style={{ fontSize: '0.85rem', color: 'var(--text-tertiary)', margin: '0.25rem 0 0 1.5rem', lineHeight: '1.5', fontWeight: 400 }}>{link.summary}</p>
                            )}
                          </li>
                        ))}
@@ -830,7 +832,7 @@ export default function App() {
               <div className={`glass-card ${poppedCard === 'us' ? 'popped-out' : ''}`}>
                 <div onClick={() => setPoppedCard(p => p === 'us' ? null : 'us')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
                   <h3 style={{ color: '#3b82f6', margin: 0 }}>🇺🇸 US Stocks (USD) — ${usStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
-                  <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'us' ? '✕' : '⤢'}</span>
+                  <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'us' ? '✕' : '⤢'}</span>
                 </div>
                 {usStocksData.length > 0 ? (
                   <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'us' || isNarrow ? 'column' : 'row' }}>
@@ -872,13 +874,13 @@ export default function App() {
                       })}
                     </div>
                   </div>
-                ) : <p style={{ color: '#64748b' }}>No US Stocks logged.</p>}
+                ) : <p style={{ color: 'var(--text-tertiary)' }}>No US Stocks logged.</p>}
               </div>
 
               <div className={`glass-card ${poppedCard === 'tw' ? 'popped-out' : ''}`}>
                 <div onClick={() => setPoppedCard(p => p === 'tw' ? null : 'tw')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
                   <h3 style={{ color: '#10b981', margin: 0 }}>🇹🇼 Taiwan Stocks (NTD) — NT${twStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
-                  <span style={{ fontSize: '1.5rem', color: '#64748b' }}>{poppedCard === 'tw' ? '✕' : '⤢'}</span>
+                  <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'tw' ? '✕' : '⤢'}</span>
                 </div>
                 {twStocksData.length > 0 ? (
                   <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'tw' || isNarrow ? 'column' : 'row' }}>
@@ -920,7 +922,7 @@ export default function App() {
                       })}
                     </div>
                   </div>
-                ) : <p style={{ color: '#64748b' }}>No Taiwan Stocks logged.</p>}
+                ) : <p style={{ color: 'var(--text-tertiary)' }}>No Taiwan Stocks logged.</p>}
               </div>
             </div>
           </div>
