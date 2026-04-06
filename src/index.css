@@ -517,27 +517,44 @@ header p {
     font-size: 0.85rem;
   }
 
+  /* Row 1: currency flush left, theme flush right, empty center column; row 2: three equal actions */
   .header-toolbar {
+    --header-toolbar-h: 2.75rem;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto auto;
     gap: 0.45rem;
     align-items: stretch;
   }
 
   .header-toolbar > .currency-tabs {
-    grid-column: 1 / span 2;
-    align-self: center;
-    width: 100%;
+    grid-row: 1;
+    grid-column: 1;
+    justify-self: start;
+    width: max-content;
+    max-width: 100%;
+    min-height: var(--header-toolbar-h);
+    display: flex;
+    align-items: stretch;
+    align-self: stretch;
+    box-sizing: border-box;
   }
 
   .header-toolbar > .theme-toggle {
+    grid-row: 1;
     grid-column: 3;
-    width: 100%;
+    justify-self: end;
+    width: max-content;
+    max-width: 100%;
     min-width: 0;
-    min-height: 2.45rem;
+    min-height: var(--header-toolbar-h);
     box-sizing: border-box;
-    font-size: 0.72rem;
-    padding: 0.3rem 0.35rem;
+    font-size: 0.78rem;
+    padding: 0 0.65rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
   }
 
   .header-toolbar > :nth-child(3),
@@ -545,8 +562,8 @@ header p {
   .header-toolbar > :nth-child(5) {
     grid-row: 2;
     width: 100%;
-    min-height: 2.45rem;
-    padding: 0.45rem 0.2rem;
+    min-height: var(--header-toolbar-h);
+    padding: 0 0.2rem;
     font-size: 0.74rem;
     justify-content: center;
     box-sizing: border-box;
@@ -574,8 +591,13 @@ header p {
   }
 
   .header-toolbar .currency-tabs__btn {
-    padding: 0.35rem 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 0.45rem;
     font-size: 0.78rem;
+    min-height: 100%;
+    box-sizing: border-box;
   }
 }
 
