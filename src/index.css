@@ -803,6 +803,24 @@ html[data-theme="light"] .holdings-section {
   overflow: visible !important;
 }
 
+.pie-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.pie-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
 .recharts-responsive-container {
   min-width: 0 !important;
 }

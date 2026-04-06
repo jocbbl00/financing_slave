@@ -40,21 +40,28 @@ const CURRENCY_SYMBOLS = { USD: '$', NTD: 'NT$', JPY: '¥' };
 
 const RADIAN = Math.PI / 180;
 
-function renderPieLabel({ cx, cy, midAngle, outerRadius, name, percent, index }) {
+function renderPieLabel({ cx, cy, midAngle, outerRadius, percent, index }) {
   if (percent < 0.03) return null;
-  const ex = cx + (outerRadius + 30) * Math.cos(-midAngle * RADIAN);
-  const ey = cy + (outerRadius + 30) * Math.sin(-midAngle * RADIAN);
-  const textAnchor = ex > cx ? 'start' : 'end';
-  const lineX = cx + outerRadius * Math.cos(-midAngle * RADIAN);
-  const lineY = cy + outerRadius * Math.sin(-midAngle * RADIAN);
+  const gap = 14;
+  const lineEnd = outerRadius + gap;
+  const labelR = outerRadius + gap + 4;
+  const cosA = Math.cos(-midAngle * RADIAN);
+  const sinA = Math.sin(-midAngle * RADIAN);
+  const sx = cx + outerRadius * cosA;
+  const sy = cy + outerRadius * sinA;
+  const ex = cx + lineEnd * cosA;
+  const ey = cy + lineEnd * sinA;
+  const lx = cx + labelR * cosA;
+  const ly = cy + labelR * sinA;
+  const textAnchor = lx > cx ? 'start' : 'end';
   const pct = `${(percent * 100).toFixed(0)}%`;
   return (
     <g key={`label-${index}`}>
-      <line x1={lineX} y1={lineY} x2={ex} y2={ey} stroke="var(--text-tertiary)" strokeWidth={1} />
+      <line x1={sx} y1={sy} x2={ex} y2={ey} stroke="var(--text-tertiary)" strokeWidth={1} />
       <circle cx={ex} cy={ey} r={2} fill="var(--text-tertiary)" />
-      <text x={ex + (ex > cx ? 5 : -5)} y={ey} textAnchor={textAnchor} dominantBaseline="central"
-        style={{ fontSize: '0.7rem', fill: 'var(--text-secondary)', fontWeight: 600 }}>
-        {name} {pct}
+      <text x={lx + (lx > cx ? 4 : -4)} y={ly} textAnchor={textAnchor} dominantBaseline="central"
+        style={{ fontSize: '0.65rem', fill: 'var(--text-secondary)', fontWeight: 600 }}>
+        {pct}
       </text>
     </g>
   );
@@ -169,8 +176,8 @@ export default function App() {
   const collapsedChartHeight = isNarrow ? 300 : 320;
   const pieRadii = (popped) =>
     popped
-      ? { inner: isNarrow ? '20%' : '24%', outer: isNarrow ? '38%' : '42%' }
-      : { inner: isNarrow ? '24%' : '28%', outer: isNarrow ? '42%' : '48%' };
+      ? { inner: isNarrow ? '22%' : '28%', outer: isNarrow ? '42%' : '48%' }
+      : { inner: isNarrow ? '26%' : '30%', outer: isNarrow ? '48%' : '52%' };
 
   const addFormCategory = formData.category.trim();
   const isUsdStockCat = addFormCategory === 'USD Stock';
@@ -638,8 +645,8 @@ export default function App() {
             <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'distribution' ? '✕' : '⤢'}</span>
           </div>
           
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'distribution' || isNarrow ? 'column' : 'row' }}>
-            <div className="chart-wrap" style={{ flex: '1 1 auto', minWidth: 0, width: '100%', minHeight: poppedCard === 'distribution' ? poppedChartHeight : collapsedChartHeight }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+            <div className="chart-wrap" style={{ width: '100%', minHeight: poppedCard === 'distribution' ? poppedChartHeight : collapsedChartHeight }}>
               <ResponsiveContainer width="100%" height={poppedCard === 'distribution' ? poppedChartHeight : collapsedChartHeight}>
                 <PieChart>
                   <Pie 
@@ -667,11 +674,11 @@ export default function App() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
+            <div className="pie-legend">
               {pieData.map((entry, index) => (
-                <div key={entry.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div key={entry.name} className="pie-legend-item">
                   <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: entry.fill || PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>{entry.name}</span>
+                  <span>{entry.name}</span>
                 </div>
               ))}
             </div>
@@ -900,8 +907,8 @@ export default function App() {
                   <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'us' ? '✕' : '⤢'}</span>
                 </div>
                 {usStocksData.length > 0 ? (
-                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'us' || isNarrow ? 'column' : 'row' }}>
-                    <div className="chart-wrap" style={{ flex: '1 1 auto', minWidth: 0, width: '100%', minHeight: poppedCard === 'us' ? poppedChartHeight : collapsedChartHeight }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                    <div className="chart-wrap" style={{ width: '100%', minHeight: poppedCard === 'us' ? poppedChartHeight : collapsedChartHeight }}>
                       <ResponsiveContainer width="100%" height={poppedCard === 'us' ? poppedChartHeight : collapsedChartHeight}>
                         <PieChart>
                           <Pie 
@@ -925,16 +932,14 @@ export default function App() {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
+                    <div className="pie-legend">
                       {usStocksData.map((e, index) => {
                         const total = usStocksData.reduce((s, i) => s + i.value, 0);
                         const pct = total > 0 ? ((e.value / total) * 100).toFixed(1) : '0.0';
                         return (
-                          <div key={e.ticker} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div key={e.ticker} className="pie-legend-item">
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>
-                              {e.name} - ${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)
-                            </span>
+                            <span>{e.name} - ${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)</span>
                           </div>
                         );
                       })}
@@ -956,8 +961,8 @@ export default function App() {
                   <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'tw' ? '✕' : '⤢'}</span>
                 </div>
                 {twStocksData.length > 0 ? (
-                  <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flexDirection: poppedCard === 'tw' || isNarrow ? 'column' : 'row' }}>
-                    <div className="chart-wrap" style={{ flex: '1 1 auto', minWidth: 0, width: '100%', minHeight: poppedCard === 'tw' ? poppedChartHeight : collapsedChartHeight }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+                    <div className="chart-wrap" style={{ width: '100%', minHeight: poppedCard === 'tw' ? poppedChartHeight : collapsedChartHeight }}>
                       <ResponsiveContainer width="100%" height={poppedCard === 'tw' ? poppedChartHeight : collapsedChartHeight}>
                         <PieChart>
                           <Pie 
@@ -981,16 +986,14 @@ export default function App() {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', flexShrink: 0 }}>
+                    <div className="pie-legend">
                       {twStocksData.map((e, index) => {
                         const total = twStocksData.reduce((s, i) => s + i.value, 0);
                         const pct = total > 0 ? ((e.value / total) * 100).toFixed(1) : '0.0';
                         return (
-                          <div key={e.ticker} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div key={e.ticker} className="pie-legend-item">
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[(index + 4) % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>
-                              {e.name} - NT${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)
-                            </span>
+                            <span>{e.name} - NT${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)</span>
                           </div>
                         );
                       })}
