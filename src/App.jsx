@@ -318,19 +318,19 @@ export default function App() {
         summary: 'Taiwan Weighted Index — overall local market tone vs your NTD / Taiwan listings.',
       },
       {
-        text: 'Reuters · US markets',
-        url: 'https://www.reuters.com/markets/us/',
-        summary: 'Headlines on US indices, earnings, and policy moving risk assets.',
+        text: 'Forbes · Why the 2026 Fintech Boom Is About More Than AI',
+        url: 'https://www.forbes.com/sites/zennonkapron/2026/04/01/why-the-2026-fintech-funding-boom-is-about-more-than-ai/',
+        summary: '10+ mega-rounds in Q1 alone — embedded finance, stablecoins for B2B settlement, and scaling beyond the AI hype.',
       },
       {
-        text: 'CNBC · Markets',
-        url: 'https://www.cnbc.com/markets/',
-        summary: 'Breaking moves in stocks, bonds, and futures with intraday context.',
+        text: 'Deloitte · 2026 Semiconductor Industry Outlook',
+        url: 'https://www.deloitte.com/us/en/insights/industry/technology/technology-media-telecom-outlooks/semiconductor-industry-outlook.html',
+        summary: 'AI chips approaching 73% of industry revenue; HBM4, advanced packaging bottlenecks, and geopolitical risks to watch.',
       },
       {
-        text: 'Financial Times · Markets',
-        url: 'https://www.ft.com/markets',
-        summary: 'Global markets coverage: rates, FX, and cross-border flows.',
+        text: 'ING · Central Banks in 2026: Rate Move Predictions',
+        url: 'https://think.ing.com/articles/central-banks-predictions-for-2026',
+        summary: 'Fed cutting to ~3.25%, ECB done, BOJ hiking — bank-by-bank outlook on rates, yields, and what it means for portfolios.',
       },
     ];
 
