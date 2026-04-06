@@ -808,23 +808,29 @@ html[data-theme="light"] .holdings-section {
   flex-wrap: wrap;
   gap: 0.35rem 1.25rem;
   width: 100%;
+  max-width: 100%;
   justify-content: center;
+  overflow: hidden;
 }
 
 .pie-legend-item {
   display: grid;
-  grid-template-columns: 10px minmax(0, auto);
-  align-items: center;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: start;
+  min-width: 0;
   gap: 0.4rem;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-secondary);
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .pie-legend--two-rows {
   display: grid;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
   justify-items: start;
   justify-content: center;
   gap: 0.35rem 1.25rem;
@@ -832,7 +838,8 @@ html[data-theme="light"] .holdings-section {
 
 .pie-legend--one-column {
   display: grid;
-  grid-template-columns: minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
   justify-items: start;
   justify-content: center;
   gap: 0.35rem;
