@@ -351,19 +351,19 @@ export default function App() {
         summary: 'Taiwan Weighted Index — overall local market tone vs your NTD / Taiwan listings.',
       },
       {
-        text: 'Forbes · Why the 2026 Fintech Boom Is About More Than AI',
-        url: 'https://www.forbes.com/sites/zennonkapron/2026/04/01/why-the-2026-fintech-funding-boom-is-about-more-than-ai/',
-        summary: '10+ mega-rounds in Q1 alone — embedded finance, stablecoins for B2B settlement, and scaling beyond the AI hype.',
+        text: 'WIRED · The AI Data Center Boom Is Warping the US Economy',
+        url: 'https://www.wired.com/story/data-center-ai-boom-us-economy-jobs/',
+        summary: 'Tracks how hyperscaler capex and power demand are changing jobs, local grids, and AI infrastructure economics.',
       },
       {
-        text: 'Deloitte · 2026 Semiconductor Industry Outlook',
-        url: 'https://www.deloitte.com/us/en/insights/industry/technology/technology-media-telecom-outlooks/semiconductor-industry-outlook.html',
-        summary: 'AI chips approaching 73% of industry revenue; HBM4, advanced packaging bottlenecks, and geopolitical risks to watch.',
+        text: 'WSJ · Treasury Yields, Dollar Rise on Fed’s Hawkish Tone',
+        url: 'https://on.wsj.com/48UduHJ',
+        summary: 'Useful read for rate-path risk: bond yields and USD moves directly affect valuation multiples and global risk appetite.',
       },
       {
-        text: 'ING · Central Banks in 2026: Rate Move Predictions',
-        url: 'https://think.ing.com/articles/central-banks-predictions-for-2026',
-        summary: 'Fed cutting to ~3.25%, ECB done, BOJ hiking — bank-by-bank outlook on rates, yields, and what it means for portfolios.',
+        text: 'The Economist · The Semiconductor Choke-point',
+        url: 'https://www.economist.com/asia/2024/06/13/the-semiconductor-choke-point',
+        summary: 'Explains Taiwan concentration risk and supply-chain geopolitics that can swing both your US chip names and TSMC exposure.',
       },
     ];
 
