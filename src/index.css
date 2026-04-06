@@ -454,6 +454,29 @@ header p {
   background: rgba(234, 179, 8, 0.6);
 }
 
+/* Stock Holdings outer shell: no backdrop-filter so expanded cards stay viewport-fixed on mobile (Safari/iOS). */
+.holdings-section {
+  grid-column: 1 / -1;
+  padding: 2rem;
+  border-radius: 24px;
+  border: 1px solid var(--glass-border);
+  background: rgba(30, 41, 59, 0.42);
+  box-shadow: var(--card-shadow);
+}
+
+html[data-theme="light"] .holdings-section {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.expand-card-hit {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
 .chart-wrap {
   width: 100%;
   min-width: 0;
@@ -477,7 +500,7 @@ header p {
   background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  z-index: 999;
+  z-index: 9998;
   cursor: pointer;
   touch-action: manipulation;
   animation: fadeIn 0.3s;
@@ -493,7 +516,7 @@ header p {
   max-height: calc(100vh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
   max-height: calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
   max-width: none !important;
-  z-index: 1000 !important;
+  z-index: 9999 !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
   -webkit-overflow-scrolling: touch;

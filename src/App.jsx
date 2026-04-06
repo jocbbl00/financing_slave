@@ -861,12 +861,19 @@ export default function App() {
 
       {activeTab === 'Stock Holdings' && (
         <div className="dashboard-grid">
-          <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
+          <div className="holdings-section">
             <h2 style={{ fontWeight: 600, marginBottom: '2rem' }}>📈 Equity Portfolio Breakdown</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
               
               <div className={`glass-card ${poppedCard === 'us' ? 'popped-out' : ''}`}>
-                <div onClick={() => setPoppedCard(p => p === 'us' ? null : 'us')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
+                <div
+                  className="expand-card-hit"
+                  onClick={() => setPoppedCard(p => p === 'us' ? null : 'us')}
+                  style={{ justifyContent: 'space-between', cursor: 'pointer', marginBottom: '1rem' }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPoppedCard(p => p === 'us' ? null : 'us'); } }}
+                >
                   <h3 style={{ color: '#3b82f6', margin: 0 }}>🇺🇸 US Stocks (USD) — ${usStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
                   <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'us' ? '✕' : '⤢'}</span>
                 </div>
@@ -914,7 +921,14 @@ export default function App() {
               </div>
 
               <div className={`glass-card ${poppedCard === 'tw' ? 'popped-out' : ''}`}>
-                <div onClick={() => setPoppedCard(p => p === 'tw' ? null : 'tw')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
+                <div
+                  className="expand-card-hit"
+                  onClick={() => setPoppedCard(p => p === 'tw' ? null : 'tw')}
+                  style={{ justifyContent: 'space-between', cursor: 'pointer', marginBottom: '1rem' }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPoppedCard(p => p === 'tw' ? null : 'tw'); } }}
+                >
                   <h3 style={{ color: '#10b981', margin: 0 }}>🇹🇼 Taiwan Stocks (NTD) — NT${twStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
                   <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'tw' ? '✕' : '⤢'}</span>
                 </div>
