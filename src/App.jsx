@@ -483,7 +483,7 @@ export default function App() {
   if (isLoading) {
     return (
       <div className="app-container" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <h2 style={{ color: 'var(--text-primary)' }}>Loading Historical Spreadsheets...</h2>
+        <h2 style={{ color: 'var(--text-primary)' }}>Your slave is working hard....</h2>
       </div>
     );
   }
