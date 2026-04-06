@@ -542,9 +542,10 @@ function doPost(e) {
   
   // ===== UPDATE LEDGER: Add stock / adjust quantity; log transaction with ID & unit price =====
   if (requestData.action === 'update_ledger') {
-    const { category, ticker, qty, date, type, price } = requestData;
+    const { category, ticker, qty, date, type, price, displayName } = requestData;
     const mathQty = (type === 'Sell') ? -Math.abs(Number(qty)) : Number(qty);
     const unitPrice = Number(price) || 0;
+    const nameTrim = displayName != null ? String(displayName).trim() : '';
 
     let txSheet = spreadsheet.getSheetByName('Transactions');
     if (!txSheet) txSheet = spreadsheet.insertSheet('Transactions');
@@ -585,11 +586,13 @@ function doPost(e) {
         sheet.getRange(foundRow, L.colUsd).setFormula('=' + qLet + foundRow + '*GOOGLEFINANCE("' + ticker + '","price")');
         sheet.getRange(foundRow, L.colNtd).setFormula('=' + uLet + foundRow + '*32');
         updateAvgCostAfterTrade_(sheet, L, foundRow, category, type || 'Buy', mathQty, unitPrice);
+        if (nameTrim && L.colName) sheet.getRange(foundRow, L.colName).setValue(nameTrim);
       } else if (category === 'NTD Stock' || category === 'NTD Preferred') {
         sheet.getRange(foundRow, L.colQty).setValue(newQty);
         sheet.getRange(foundRow, L.colNtd).setFormula('=' + qLet + foundRow + '*GOOGLEFINANCE("TPE:' + ticker + '","price")');
         sheet.getRange(foundRow, L.colUsd).setFormula('=' + nLet + foundRow + '/32');
         updateAvgCostAfterTrade_(sheet, L, foundRow, category, type || 'Buy', mathQty, unitPrice);
+        if (nameTrim && L.colName) sheet.getRange(foundRow, L.colName).setValue(nameTrim);
       } else {
         if (category.startsWith('USD') || category === 'Loan') {
           var curUsd2 = Number(sheet.getRange(foundRow, L.colUsd).getValue()) || 0;
@@ -605,7 +608,10 @@ function doPost(e) {
       const newRow = lastRow < 2 ? 2 : lastRow + 1;
       sheet.getRange(newRow, L.colCat).setValue(category);
       sheet.getRange(newRow, L.colTick).setValue(ticker);
-      if (L.colName) sheet.getRange(newRow, L.colName).setValue('');
+      if (L.colName) {
+        var isStockRow = category === 'USD Stock' || category === 'NTD Stock' || category === 'NTD Preferred';
+        sheet.getRange(newRow, L.colName).setValue(isStockRow && nameTrim ? nameTrim : '');
+      }
 
       if (category === 'USD Stock') {
         sheet.getRange(newRow, L.colQty).setValue(newQty);

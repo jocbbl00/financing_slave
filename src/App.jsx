@@ -47,14 +47,21 @@ const TICKER_NAMES = {
   // Taiwan Stocks
   '2330': 'TSMC', '2890': 'SinoPac',
   '00687B': 'CTBC Bond ETF', '00719B': 'Yuanta Bond ETF',
+  '2887E': 'Taishin Fin (Pfd)', '2882A': 'Cathay Fin (Pfd)',
 };
 const tickerLabel = (ticker) => {
   const name = TICKER_NAMES[ticker];
-  return name ? `${name}(${ticker})` : ticker;
+  return name ? `${name} · ${ticker}` : String(ticker);
 };
 
-/** Taiwan holdings: sheet DisplayName + code (e.g. TSMC · 2330), else mapped name. */
+/** Sheet DisplayName + symbol/code; else mapped name · code. */
 const twDisplayLabel = (ticker, displayName) => {
+  const d = displayName && String(displayName).trim();
+  if (d) return `${d} · ${ticker}`;
+  return tickerLabel(ticker);
+};
+
+const usDisplayLabel = (ticker, displayName) => {
   const d = displayName && String(displayName).trim();
   if (d) return `${d} · ${ticker}`;
   return tickerLabel(ticker);
@@ -85,7 +92,15 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('Overview');
   const [roiTab, setRoiTab] = useState('US');
   
-  const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', type: 'Buy', price: '' });
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    category: '',
+    ticker: '',
+    stockName: '',
+    amount: '',
+    type: 'Buy',
+    price: '',
+  });
   const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [theme, setTheme] = useState(() =>
@@ -113,6 +128,13 @@ export default function App() {
     popped
       ? { inner: isNarrow ? '28%' : '32%', outer: isNarrow ? '46%' : '52%' }
       : { inner: isNarrow ? '36%' : '40%', outer: isNarrow ? '56%' : '68%' };
+
+  /** Outside slice labels + leader lines overlap on narrow viewports; legend stays readable. */
+  const showPieOutsideLabels = !isNarrow;
+
+  const addFormCategory = formData.category.trim();
+  const isUsdStockCat = addFormCategory === 'USD Stock';
+  const isTwStockCat = addFormCategory === 'NTD Stock' || addFormCategory === 'NTD Preferred';
 
   useEffect(() => {
     fetchPortfolio();
@@ -338,7 +360,11 @@ export default function App() {
   // Build pie chart data from individual portfolio items (using tickers)
   const usStocksData = portfolioItems
       .filter(a => a.category === 'USD Stock' && (Number(a.usdValue) || 0) > 0)
-      .map(a => ({ name: tickerLabel(a.ticker), value: Number(a.usdValue) || 0 }));
+      .map(a => ({
+        ticker: a.ticker,
+        name: usDisplayLabel(a.ticker, a.displayName),
+        value: Number(a.usdValue) || 0,
+      }));
 
   const twStocksData = portfolioItems
       .filter(a => a.category === 'NTD Stock' && (Number(a.ntdValue) || 0) > 0)
@@ -429,12 +455,21 @@ export default function App() {
           ticker: formData.ticker, 
           qty,
           type: formData.type,
-          price: Number(formData.price) || 0
+          price: Number(formData.price) || 0,
+          displayName: formData.stockName.trim(),
         }),
       });
 
       setIsModalOpen(false);
-      setFormData({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', type: 'Buy', price: '' });
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        category: '',
+        ticker: '',
+        stockName: '',
+        amount: '',
+        type: 'Buy',
+        price: '',
+      });
       fetchPortfolio();
     } catch (err) {
       console.error('Failed to update asset', err);
@@ -639,7 +674,7 @@ export default function App() {
                     innerRadius={pieRadii(poppedCard === 'distribution').inner}
                     outerRadius={pieRadii(poppedCard === 'distribution').outer}
                     paddingAngle={4}
-                    label={poppedCard === 'distribution' ? ({ name, percent }) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(0)}%` : '' : false}
+                    label={poppedCard === 'distribution' && showPieOutsideLabels ? ({ name, percent }) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(0)}%` : '' : false}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill || PIE_COLORS[index % PIE_COLORS.length]} />
@@ -763,7 +798,11 @@ export default function App() {
                return (
                  <div key={item.ticker} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem 0', borderBottom: '1px solid rgba(148, 163, 184, 0.2)', alignItems: 'center' }}>
                    <div>
-                     <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>{tickerLabel(item.ticker)}</strong>
+                     <strong style={{ fontSize: '1rem', color: 'var(--text-primary)' }}>
+                       {item.category === 'USD Stock'
+                         ? usDisplayLabel(item.ticker, item.displayName)
+                         : twDisplayLabel(item.ticker, item.displayName)}
+                     </strong>
                      <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginTop: '0.1rem' }}>Qty: {qty}</div>
                    </div>
                    <div style={{ textAlign: 'right' }}>
@@ -891,12 +930,12 @@ export default function App() {
                             innerRadius={pieRadii(poppedCard === 'us').inner}
                             outerRadius={pieRadii(poppedCard === 'us').outer}
                             paddingAngle={4}
-                            label={poppedCard === 'us' ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
+                            label={poppedCard === 'us' && showPieOutsideLabels ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
                             isAnimationActive={false}
                             activeIndex={-1}
                             activeShape={null}
                           >
-                            {usStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
+                            {usStocksData.map((e, index) => <Cell key={e.ticker} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                           </Pie>
                           <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.USD}${(val).toLocaleString()}`} contentStyle={chartTooltipStyle} />
                         </PieChart>
@@ -907,7 +946,7 @@ export default function App() {
                         const total = usStocksData.reduce((s, i) => s + i.value, 0);
                         const pct = total > 0 ? ((e.value / total) * 100).toFixed(1) : '0.0';
                         return (
-                          <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div key={e.ticker} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
                             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>
                               {e.name} - ${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)
@@ -946,7 +985,7 @@ export default function App() {
                             innerRadius={pieRadii(poppedCard === 'tw').inner}
                             outerRadius={pieRadii(poppedCard === 'tw').outer}
                             paddingAngle={4}
-                            label={poppedCard === 'tw' ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
+                            label={poppedCard === 'tw' && showPieOutsideLabels ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
                             isAnimationActive={false}
                             activeIndex={-1}
                             activeShape={null}
@@ -1012,16 +1051,44 @@ export default function App() {
             </div>
 
             <div className="form-group" style={{ marginBottom: '1rem' }}>
-              <label>Stock Number / Asset Name</label>
+              <label>
+                {isUsdStockCat
+                  ? 'US ticker (exchange symbol)'
+                  : isTwStockCat
+                    ? 'Taiwan stock code (numeric / letter suffix)'
+                    : 'Ticker / account identifier'}
+              </label>
               <input 
                 type="text"
                 className="form-control" 
-                placeholder="e.g. AAPL, 2330, Bank A"
+                placeholder={
+                  isUsdStockCat
+                    ? 'e.g. AAPL, MSFT'
+                    : isTwStockCat
+                      ? 'e.g. 2330, 00687B, 2887E'
+                      : 'Pick category first (e.g. USD Stock or NTD Stock)'
+                }
                 value={formData.ticker}
                 onChange={e => setFormData({...formData, ticker: e.target.value})}
                 required
               />
             </div>
+
+            {(isUsdStockCat || isTwStockCat) && (
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label>Stock name (optional)</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. TSMC — saved to sheet DisplayName; shown in charts"
+                  value={formData.stockName}
+                  onChange={e => setFormData({ ...formData, stockName: e.target.value })}
+                />
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.35rem', marginBottom: 0 }}>
+                  The sheet keeps <strong>Ticker</strong> for prices (GOOGLEFINANCE) and <strong>DisplayName</strong> for labels.
+                </p>
+              </div>
+            )}
 
             <div className="form-group" style={{ marginBottom: '1rem', display: 'flex', gap: '1rem' }}>
               <div style={{ flex: 1 }}>
