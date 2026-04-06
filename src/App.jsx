@@ -38,6 +38,28 @@ const DEFAULT_FX = { twdPerUsd: 32, jpyPerUsd: 150 };
 
 const CURRENCY_SYMBOLS = { USD: '$', NTD: 'NT$', JPY: '¥' };
 
+const RADIAN = Math.PI / 180;
+
+function renderPieLabel({ cx, cy, midAngle, outerRadius, name, percent, index }) {
+  if (percent < 0.03) return null;
+  const ex = cx + (outerRadius + 30) * Math.cos(-midAngle * RADIAN);
+  const ey = cy + (outerRadius + 30) * Math.sin(-midAngle * RADIAN);
+  const textAnchor = ex > cx ? 'start' : 'end';
+  const lineX = cx + outerRadius * Math.cos(-midAngle * RADIAN);
+  const lineY = cy + outerRadius * Math.sin(-midAngle * RADIAN);
+  const pct = `${(percent * 100).toFixed(0)}%`;
+  return (
+    <g key={`label-${index}`}>
+      <line x1={lineX} y1={lineY} x2={ex} y2={ey} stroke="var(--text-tertiary)" strokeWidth={1} />
+      <circle cx={ex} cy={ey} r={2} fill="var(--text-tertiary)" />
+      <text x={ex + (ex > cx ? 5 : -5)} y={ey} textAnchor={textAnchor} dominantBaseline="central"
+        style={{ fontSize: '0.7rem', fill: 'var(--text-secondary)', fontWeight: 600 }}>
+        {name} {pct}
+      </text>
+    </g>
+  );
+}
+
 /** Pie stores wedge size in TWD-equivalent; convert to selected display currency. */
 function pieNtdEquivToDisplay(ntdEquiv, currency, fx) {
   const twd = fx.twdPerUsd > 0 ? fx.twdPerUsd : DEFAULT_FX.twdPerUsd;
@@ -144,14 +166,11 @@ export default function App() {
 
   const { narrow: isNarrow, height: viewportH } = useViewport();
   const poppedChartHeight = isNarrow ? Math.min(400, Math.round(viewportH * 0.52)) : 500;
-  const collapsedChartHeight = isNarrow ? 260 : 250;
+  const collapsedChartHeight = isNarrow ? 300 : 320;
   const pieRadii = (popped) =>
     popped
-      ? { inner: isNarrow ? '28%' : '32%', outer: isNarrow ? '46%' : '52%' }
-      : { inner: isNarrow ? '36%' : '40%', outer: isNarrow ? '56%' : '68%' };
-
-  /** Outside slice labels + leader lines overlap on narrow viewports; legend stays readable. */
-  const showPieOutsideLabels = !isNarrow;
+      ? { inner: isNarrow ? '20%' : '24%', outer: isNarrow ? '38%' : '42%' }
+      : { inner: isNarrow ? '24%' : '28%', outer: isNarrow ? '42%' : '48%' };
 
   const addFormCategory = formData.category.trim();
   const isUsdStockCat = addFormCategory === 'USD Stock';
@@ -632,7 +651,8 @@ export default function App() {
                     innerRadius={pieRadii(poppedCard === 'distribution').inner}
                     outerRadius={pieRadii(poppedCard === 'distribution').outer}
                     paddingAngle={4}
-                    label={poppedCard === 'distribution' && showPieOutsideLabels ? ({ name, percent }) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(0)}%` : '' : false}
+                    label={renderPieLabel}
+                    labelLine={false}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill || PIE_COLORS[index % PIE_COLORS.length]} />
@@ -893,7 +913,8 @@ export default function App() {
                             innerRadius={pieRadii(poppedCard === 'us').inner}
                             outerRadius={pieRadii(poppedCard === 'us').outer}
                             paddingAngle={4}
-                            label={poppedCard === 'us' && showPieOutsideLabels ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
+                            label={renderPieLabel}
+                            labelLine={false}
                             isAnimationActive={false}
                             activeIndex={-1}
                             activeShape={null}
@@ -948,7 +969,8 @@ export default function App() {
                             innerRadius={pieRadii(poppedCard === 'tw').inner}
                             outerRadius={pieRadii(poppedCard === 'tw').outer}
                             paddingAngle={4}
-                            label={poppedCard === 'tw' && showPieOutsideLabels ? ({name, percent}) => percent > 0.03 ? `${name} ${(percent * 100).toFixed(1)}%` : '' : false}
+                            label={renderPieLabel}
+                            labelLine={false}
                             isAnimationActive={false}
                             activeIndex={-1}
                             activeShape={null}

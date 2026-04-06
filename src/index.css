@@ -207,11 +207,12 @@ header p {
   width: 100%;
 }
 
-/* Desktop: every toolbar child is exactly the same height. */
+/* Desktop: currency left, actions right, all same height. */
 @media (min-width: 769px) {
   .header-toolbar {
     --tb-h: 2.75rem;
     align-items: stretch;
+    justify-content: flex-start;
   }
 
   /* Force ALL direct children to uniform height */
@@ -225,7 +226,9 @@ header p {
     justify-content: center !important;
   }
 
-  .header-toolbar .currency-tabs {
+  /* Push everything after currency to the right */
+  .header-toolbar > .currency-tabs {
+    margin-right: auto;
     overflow: hidden;
   }
 
@@ -793,6 +796,11 @@ html[data-theme="light"] .holdings-section {
   width: 100%;
   min-width: 0;
   overflow: visible;
+}
+
+.chart-wrap .recharts-wrapper,
+.chart-wrap .recharts-surface {
+  overflow: visible !important;
 }
 
 .recharts-responsive-container {
