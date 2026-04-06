@@ -40,31 +40,35 @@ const CURRENCY_SYMBOLS = { USD: '$', NTD: 'NT$', JPY: '¥' };
 
 const RADIAN = Math.PI / 180;
 
-function renderPieLabel({ cx, cy, midAngle, outerRadius, name, percent, index }) {
-  if (percent < 0.01) return null;
-  const gap = 14;
-  const lineEnd = outerRadius + gap;
-  const labelR = outerRadius + gap + 4;
-  const cosA = Math.cos(-midAngle * RADIAN);
-  const sinA = Math.sin(-midAngle * RADIAN);
-  const sx = cx + outerRadius * cosA;
-  const sy = cy + outerRadius * sinA;
-  const ex = cx + lineEnd * cosA;
-  const ey = cy + lineEnd * sinA;
-  const lx = cx + labelR * cosA;
-  const ly = cy + labelR * sinA;
-  const textAnchor = lx > cx ? 'start' : 'end';
-  const pct = `${(percent * 100).toFixed(0)}%`;
-  return (
-    <g key={`label-${index}`}>
-      <line x1={sx} y1={sy} x2={ex} y2={ey} stroke="var(--text-tertiary)" strokeWidth={1} />
-      <circle cx={ex} cy={ey} r={2} fill="var(--text-tertiary)" />
-      <text x={lx + (lx > cx ? 4 : -4)} y={ly} textAnchor={textAnchor} dominantBaseline="central"
-        style={{ fontSize: '0.65rem', fill: 'var(--text-secondary)', fontWeight: 600 }}>
-        {name} {pct}
-      </text>
-    </g>
-  );
+function makePieLabel(expanded) {
+  return function PieLabel({ cx, cy, midAngle, outerRadius, name, percent, index }) {
+    if (percent < 0.01) return null;
+    const gap = expanded ? 22 : 14;
+    const dotR = expanded ? 3 : 2;
+    const fontSize = expanded ? '0.82rem' : '0.65rem';
+    const lineEnd = outerRadius + gap;
+    const labelR = outerRadius + gap + 4;
+    const cosA = Math.cos(-midAngle * RADIAN);
+    const sinA = Math.sin(-midAngle * RADIAN);
+    const sx = cx + outerRadius * cosA;
+    const sy = cy + outerRadius * sinA;
+    const ex = cx + lineEnd * cosA;
+    const ey = cy + lineEnd * sinA;
+    const lx = cx + labelR * cosA;
+    const ly = cy + labelR * sinA;
+    const textAnchor = lx > cx ? 'start' : 'end';
+    const pct = `${(percent * 100).toFixed(0)}%`;
+    return (
+      <g key={`label-${index}`}>
+        <line x1={sx} y1={sy} x2={ex} y2={ey} stroke="var(--text-tertiary)" strokeWidth={expanded ? 1.5 : 1} />
+        <circle cx={ex} cy={ey} r={dotR} fill="var(--text-tertiary)" />
+        <text x={lx + (lx > cx ? 5 : -5)} y={ly} textAnchor={textAnchor} dominantBaseline="central"
+          style={{ fontSize, fill: 'var(--text-secondary)', fontWeight: 600 }}>
+          {name} {pct}
+        </text>
+      </g>
+    );
+  };
 }
 
 /** Pie stores wedge size in TWD-equivalent; convert to selected display currency. */
@@ -176,7 +180,7 @@ export default function App() {
   const collapsedChartHeight = isNarrow ? 300 : 320;
   const pieRadii = (popped) =>
     popped
-      ? { inner: isNarrow ? '22%' : '28%', outer: isNarrow ? '42%' : '48%' }
+      ? { inner: isNarrow ? '22%' : '30%', outer: isNarrow ? '42%' : '55%' }
       : { inner: isNarrow ? '26%' : '30%', outer: isNarrow ? '48%' : '52%' };
 
   const addFormCategory = formData.category.trim();
@@ -658,7 +662,7 @@ export default function App() {
                     innerRadius={pieRadii(poppedCard === 'distribution').inner}
                     outerRadius={pieRadii(poppedCard === 'distribution').outer}
                     paddingAngle={4}
-                    label={renderPieLabel}
+                    label={makePieLabel(poppedCard === 'distribution' && !isNarrow)}
                     labelLine={false}
                   >
                     {pieData.map((entry, index) => (
@@ -920,7 +924,7 @@ export default function App() {
                             innerRadius={pieRadii(poppedCard === 'us').inner}
                             outerRadius={pieRadii(poppedCard === 'us').outer}
                             paddingAngle={4}
-                            label={renderPieLabel}
+                            label={makePieLabel(poppedCard === 'us' && !isNarrow)}
                             labelLine={false}
                             isAnimationActive={false}
                             activeIndex={-1}
@@ -974,7 +978,7 @@ export default function App() {
                             innerRadius={pieRadii(poppedCard === 'tw').inner}
                             outerRadius={pieRadii(poppedCard === 'tw').outer}
                             paddingAngle={4}
-                            label={renderPieLabel}
+                            label={makePieLabel(poppedCard === 'tw' && !isNarrow)}
                             labelLine={false}
                             isAnimationActive={false}
                             activeIndex={-1}
