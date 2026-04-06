@@ -43,13 +43,16 @@ const RADIAN = Math.PI / 180;
 function makePieLabel(expanded) {
   return function PieLabel({ cx, cy, midAngle, outerRadius, name, percent, index }) {
     if (percent < 0.01) return null;
-    const gap = expanded ? 22 : 14;
+    const gap = expanded ? 34 : 24;
     const dotR = expanded ? 3 : 2;
     const fontSize = expanded ? '0.82rem' : '0.65rem';
-    const lineEnd = outerRadius + gap;
-    const labelR = outerRadius + gap + 4;
     const cosA = Math.cos(-midAngle * RADIAN);
     const sinA = Math.sin(-midAngle * RADIAN);
+    const maxXRadius = Math.max(outerRadius + 8, (cx - 12) / Math.max(Math.abs(cosA), 0.0001));
+    const maxYRadius = Math.max(outerRadius + 8, (cy - 12) / Math.max(Math.abs(sinA), 0.0001));
+    const maxRadius = Math.min(maxXRadius, maxYRadius);
+    const lineEnd = Math.max(outerRadius + 6, Math.min(outerRadius + gap, maxRadius - 8));
+    const labelR = Math.max(lineEnd + 4, Math.min(lineEnd + 8, maxRadius));
     const sx = cx + outerRadius * cosA;
     const sy = cy + outerRadius * sinA;
     const ex = cx + lineEnd * cosA;
@@ -936,7 +939,7 @@ export default function App() {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="pie-legend">
+                    <div className="pie-legend pie-legend--two-rows">
                       {usStocksData.map((e, index) => {
                         const total = usStocksData.reduce((s, i) => s + i.value, 0);
                         const pct = total > 0 ? ((e.value / total) * 100).toFixed(1) : '0.0';
@@ -990,7 +993,7 @@ export default function App() {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="pie-legend">
+                    <div className="pie-legend pie-legend--one-row">
                       {twStocksData.map((e, index) => {
                         const total = twStocksData.reduce((s, i) => s + i.value, 0);
                         const pct = total > 0 ? ((e.value / total) * 100).toFixed(1) : '0.0';

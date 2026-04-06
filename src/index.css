@@ -812,13 +812,36 @@ html[data-theme="light"] .holdings-section {
 }
 
 .pie-legend-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: 10px minmax(0, auto);
   align-items: center;
   gap: 0.4rem;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
+}
+
+.pie-legend--two-rows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  justify-items: start;
+  justify-content: center;
+  gap: 0.35rem 1.25rem;
+}
+
+.pie-legend--one-row {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.15rem;
+}
+
+@media (max-width: 1200px) {
+  .pie-legend--two-rows {
+    grid-template-columns: minmax(280px, 1fr);
+  }
 }
 
 .recharts-responsive-container {
