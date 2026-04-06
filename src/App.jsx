@@ -495,7 +495,7 @@ export default function App() {
             <p>Real-time Portfolio Tracking & Analytics</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="header-toolbar">
           <div className="currency-tabs" role="group" aria-label="Display currency">
             {['USD', 'NTD', 'JPY'].map((c) => (
               <button

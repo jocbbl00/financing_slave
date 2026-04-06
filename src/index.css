@@ -173,6 +173,15 @@ header p {
   color: #0f172a;
 }
 
+/* Header action row: desktop one line; mobile 2 rows (currency+theme, then 3 actions). */
+.header-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+}
+
 /* Overview / Portfolio Advice / Stock Holdings — equal flex columns, no horizontal scroll on phone */
 .main-tabs {
   display: flex;
@@ -506,6 +515,67 @@ header p {
   .primary-btn {
     padding: 0.5rem 1rem;
     font-size: 0.85rem;
+  }
+
+  .header-toolbar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem;
+    align-items: stretch;
+  }
+
+  .header-toolbar > .currency-tabs {
+    grid-column: 1 / span 2;
+    align-self: center;
+    width: 100%;
+  }
+
+  .header-toolbar > .theme-toggle {
+    grid-column: 3;
+    width: 100%;
+    min-width: 0;
+    min-height: 2.45rem;
+    box-sizing: border-box;
+    font-size: 0.72rem;
+    padding: 0.3rem 0.35rem;
+  }
+
+  .header-toolbar > :nth-child(3),
+  .header-toolbar > :nth-child(4),
+  .header-toolbar > :nth-child(5) {
+    grid-row: 2;
+    width: 100%;
+    min-height: 2.45rem;
+    padding: 0.45rem 0.2rem;
+    font-size: 0.74rem;
+    justify-content: center;
+    box-sizing: border-box;
+    line-height: 1.15;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .header-toolbar > :nth-child(3) {
+    grid-column: 1;
+  }
+
+  .header-toolbar > :nth-child(4) {
+    grid-column: 2;
+  }
+
+  .header-toolbar > :nth-child(5) {
+    grid-column: 3;
+  }
+
+  .header-toolbar > :nth-child(5) svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+
+  .header-toolbar .currency-tabs__btn {
+    padding: 0.35rem 0.4rem;
+    font-size: 0.78rem;
   }
 }
 
