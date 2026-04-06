@@ -139,18 +139,20 @@ header p {
   font-size: 1rem;
 }
 
-/* Full viewport so loading copy is truly centered (especially on mobile). */
+/* Full viewport centered — works on both mobile and desktop. */
 .loading-screen-root {
-  min-height: 100vh;
-  min-height: 100dvh;
-  min-height: -webkit-fill-available;
+  position: fixed;
+  inset: 0;
   width: 100%;
+  height: 100%;
   margin: 0;
   padding: 1.25rem;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--bg);
+  z-index: 9999;
 }
 
 .loading-screen-title {
@@ -167,7 +169,7 @@ header p {
 
 .currency-tabs {
   display: flex;
-  border-radius: 12px;
+  border-radius: 9999px;
   overflow: hidden;
   border: 1px solid var(--currency-tabs-border);
   background: var(--currency-tabs-bg);
