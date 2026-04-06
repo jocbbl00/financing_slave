@@ -785,7 +785,9 @@ export default function App() {
       {activeTab === 'Portfolio Advice' && (
         <div className="dashboard-grid">
           <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
-            <h2 style={{ fontWeight: 600, marginBottom: '1rem' }}>💡 Investment Suggestions</h2>
+            <div className="advice-main-head">
+              <h3 className="advice-card-title">💡 Investment Suggestions</h3>
+            </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.55 }}>
               Templates personalize with your holdings from the sheet. This is not a live AI feed — refresh after updating the spreadsheet to see numbers and names change.
             </p>
@@ -820,7 +822,7 @@ export default function App() {
           <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
             <div className="advice-main-head">
               <h3 className="advice-card-title">
-                {isNarrow ? 'AI portfolio & market advisor' : '🤖 AI portfolio & market advisor'}
+                🤖 AI portfolio & market advisor
               </h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
