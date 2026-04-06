@@ -11,8 +11,9 @@ function ensureFxSheet_(spreadsheet) {
   sh.getRange('B1').setFormula('=GOOGLEFINANCE("CURRENCY:USDTWD")');
   sh.getRange('A2').setValue('JPY per 1 USD');
   sh.getRange('B2').setFormula('=GOOGLEFINANCE("CURRENCY:USDJPY")');
+  // Keep FX visible so you can confirm rates; if it was hidden before, show it again.
   try {
-    sh.hideSheet();
+    sh.showSheet();
   } catch (e) {}
   return sh;
 }
