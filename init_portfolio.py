@@ -25,7 +25,7 @@ for ticker, qty in us_stocks.items():
     if qty == 0:
         continue
     usd = f'=IFERROR({qty}*GOOGLEFINANCE("{ticker}","price"),0)'
-    ntd = f'=IFERROR({qty}*GOOGLEFINANCE("{ticker}","price")*32,0)'
+    ntd = f'=IFERROR({qty}*GOOGLEFINANCE("{ticker}","price")*FX!$B$1,0)'
     rows.append(["USD Stock", ticker, "", qty, usd, ntd, ""])
 
 # ─── Taiwan Stocks (GOOGLEFINANCE with TPE: prefix, qty in shares not lots) ───
@@ -37,7 +37,7 @@ for ticker, (disp, qty) in tw_stocks.items():
     if qty == 0:
         continue
     ntd = f'=IFERROR({qty}*GOOGLEFINANCE("TPE:{ticker}","price"),0)'
-    usd = f'=IFERROR({qty}*GOOGLEFINANCE("TPE:{ticker}","price")/32,0)'
+    usd = f'=IFERROR({qty}*GOOGLEFINANCE("TPE:{ticker}","price")/FX!$B$1,0)'
     rows.append(["NTD Stock", ticker, disp, qty, usd, ntd, ""])
 
 # ─── Taiwan Preferred / Bond ETFs ───
@@ -47,28 +47,28 @@ tw_preferred = {
 }
 for ticker, info in tw_preferred.items():
     ntd = f'=IFERROR({info["qty"]}*GOOGLEFINANCE("TPE:{ticker}","price"), {info["ntd_value"]})'
-    usd = f'=IFERROR({info["qty"]}*GOOGLEFINANCE("TPE:{ticker}","price")/32, {info["ntd_value"]}/32)'
+    usd = f'=IFERROR({info["qty"]}*GOOGLEFINANCE("TPE:{ticker}","price")/FX!$B$1, {info["ntd_value"]}/FX!$B$1)'
     rows.append(["NTD Preferred", ticker, info["disp"], info["qty"], usd, ntd, ""])
 
 # ─── USD Preferred (Fixed deposit) — Col E USD, F NTD ───
 row_num = len(rows) + 2
-rows.append(["USD Preferred", "Richard Fixed", "", "", 54093, f"=E{row_num}*32", ""])
+rows.append(["USD Preferred", "Richard Fixed", "", "", 54093, f"=E{row_num}*FX!$B$1", ""])
 
 # ─── USD Cash Accounts ───
 usd_cash = {"Firstrade": 13769, "Wise/BOA": 10601}
 for acct, amt in usd_cash.items():
     row_num = len(rows) + 2
-    rows.append(["USD Cash", acct, "", "", amt, f"=E{row_num}*32", ""])
+    rows.append(["USD Cash", acct, "", "", amt, f"=E{row_num}*FX!$B$1", ""])
 
 # ─── NTD Cash Accounts ───
 ntd_cash = {"Cathey": 53459, "Dawho": 6507608, "Richard": 490401}
 for acct, amt in ntd_cash.items():
     row_num = len(rows) + 2
-    rows.append(["NTD Cash", acct, "", "", f"=F{row_num}/32", amt, ""])
+    rows.append(["NTD Cash", acct, "", "", f"=F{row_num}/FX!$B$1", amt, ""])
 
 # ─── Debt (placeholder — overwritten by Apps Script from Loans sheet) ───
 row_num = len(rows) + 2
-rows.append(["Loan", "NTD Student Loan", "", "", f"=-F{row_num}/32", -3677746, ""])
+rows.append(["Loan", "NTD Student Loan", "", "", f"=-F{row_num}/FX!$B$1", -3677746, ""])
 
 print(f"Total rows to upload: {len(rows)}")
 for i, r in enumerate(rows):

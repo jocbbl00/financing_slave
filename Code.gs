@@ -1,5 +1,33 @@
 // Wealth Allocator - Google Apps Script Backend
 
+/** Live FX: Portfolio formulas reference these cells (one GOOGLEFINANCE each). */
+var FX_SHEET_NAME_ = 'FX';
+var FX_TWD_PER_USD_REF_ = 'FX!$B$1';
+
+function ensureFxSheet_(spreadsheet) {
+  var sh = spreadsheet.getSheetByName(FX_SHEET_NAME_);
+  if (!sh) sh = spreadsheet.insertSheet(FX_SHEET_NAME_);
+  sh.getRange('A1').setValue('TWD per 1 USD');
+  sh.getRange('B1').setFormula('=GOOGLEFINANCE("CURRENCY:USDTWD")');
+  sh.getRange('A2').setValue('JPY per 1 USD');
+  sh.getRange('B2').setFormula('=GOOGLEFINANCE("CURRENCY:USDJPY")');
+  try {
+    sh.hideSheet();
+  } catch (e) {}
+  return sh;
+}
+
+/** Numeric rates for API (fallback if formulas not yet calculated). */
+function readFxRates_(spreadsheet) {
+  ensureFxSheet_(spreadsheet);
+  var sh = spreadsheet.getSheetByName(FX_SHEET_NAME_);
+  var twd = Number(sh.getRange('B1').getValue());
+  var jpy = Number(sh.getRange('B2').getValue());
+  if (!twd || twd <= 0 || isNaN(twd)) twd = 32;
+  if (!jpy || jpy <= 0 || isNaN(jpy)) jpy = 150;
+  return { twdPerUsd: twd, jpyPerUsd: jpy };
+}
+
 /** Full calendar months from start → as-of (inclusive of partial months by day rule). */
 function paymentMonthsElapsed_(startDate, asOfDate, termMonths) {
   const s = new Date(startDate);
@@ -89,6 +117,7 @@ function readLoansForApi_(loansSheet) {
 
 /** Writes computed loan balances into Portfolio (Loan rows). */
 function syncLoansToPortfolio_(spreadsheet) {
+  ensureFxSheet_(spreadsheet);
   var portfolioSheet = spreadsheet.getSheetByName('Portfolio');
   if (!portfolioSheet) return;
   var L = getPortfolioLayout_(portfolioSheet);
@@ -117,7 +146,7 @@ function syncLoansToPortfolio_(spreadsheet) {
         if (pData[i][0] === 'Loan' && String(pData[i][1]).trim() === ticker) {
           var rowIdx = i + 2;
           portfolioSheet.getRange(rowIdx, L.colNtd).setValue(-Math.abs(bal));
-          portfolioSheet.getRange(rowIdx, L.colUsd).setFormula('=' + columnToLetter_(L.colNtd) + rowIdx + '/32');
+          portfolioSheet.getRange(rowIdx, L.colUsd).setFormula('=' + columnToLetter_(L.colNtd) + rowIdx + '/' + FX_TWD_PER_USD_REF_);
           portfolioSheet.getRange(rowIdx, L.colQty).setValue('');
           if (L.colName) portfolioSheet.getRange(rowIdx, L.colName).setValue('');
           if (L.colCost) portfolioSheet.getRange(rowIdx, L.colCost).clearContent();
@@ -133,7 +162,7 @@ function syncLoansToPortfolio_(spreadsheet) {
       if (L.colName) portfolioSheet.getRange(newRow, L.colName).setValue('');
       portfolioSheet.getRange(newRow, L.colQty).setValue('');
       portfolioSheet.getRange(newRow, L.colNtd).setValue(-Math.abs(bal));
-      portfolioSheet.getRange(newRow, L.colUsd).setFormula('=' + columnToLetter_(L.colNtd) + newRow + '/32');
+      portfolioSheet.getRange(newRow, L.colUsd).setFormula('=' + columnToLetter_(L.colNtd) + newRow + '/' + FX_TWD_PER_USD_REF_);
     }
   }
 }
@@ -232,6 +261,7 @@ function updateAvgCostAfterTrade_(sheet, L, rowIdx, category, type, mathQty, uni
 function doGet(e) {
   const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  const fxRates = readFxRates_(spreadsheet);
   syncLoansToPortfolio_(spreadsheet);
   const loansSheet = spreadsheet.getSheetByName('Loans');
   const loansApi = loansSheet ? readLoansForApi_(loansSheet) : [];
@@ -368,7 +398,8 @@ function doGet(e) {
     portfolio: portfolio,
     history: historyData,
     transactions: txData,
-    loans: loansApi
+    loans: loansApi,
+    fx: fxRates
   })).setMimeType(ContentService.MimeType.JSON);
 }
 
@@ -382,7 +413,8 @@ function doPost(e) {
   
   const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
   const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-  
+  ensureFxSheet_(spreadsheet);
+
   // ===== INIT PORTFOLIO: One-time bulk load with GOOGLEFINANCE formulas =====
   if (requestData.action === 'init_portfolio') {
     let sheet = spreadsheet.getSheetByName('Portfolio');
@@ -518,10 +550,10 @@ function doPost(e) {
         const nLet = columnToLetter_(L.colNtd);
         if (currency === 'USD' || String(data[i][L.colCat - 1]).startsWith('USD')) {
           sheet.getRange(rowIdx, L.colUsd).setValue(Number(amount));
-          sheet.getRange(rowIdx, L.colNtd).setFormula('=' + uLet + rowIdx + '*32');
+          sheet.getRange(rowIdx, L.colNtd).setFormula('=' + uLet + rowIdx + '*' + FX_TWD_PER_USD_REF_);
         } else {
           sheet.getRange(rowIdx, L.colNtd).setValue(Number(amount));
-          sheet.getRange(rowIdx, L.colUsd).setFormula('=' + nLet + rowIdx + '/32');
+          sheet.getRange(rowIdx, L.colUsd).setFormula('=' + nLet + rowIdx + '/' + FX_TWD_PER_USD_REF_);
         }
         break;
       }
@@ -584,24 +616,24 @@ function doPost(e) {
       if (category === 'USD Stock') {
         sheet.getRange(foundRow, L.colQty).setValue(newQty);
         sheet.getRange(foundRow, L.colUsd).setFormula('=' + qLet + foundRow + '*GOOGLEFINANCE("' + ticker + '","price")');
-        sheet.getRange(foundRow, L.colNtd).setFormula('=' + uLet + foundRow + '*32');
+        sheet.getRange(foundRow, L.colNtd).setFormula('=' + uLet + foundRow + '*' + FX_TWD_PER_USD_REF_);
         updateAvgCostAfterTrade_(sheet, L, foundRow, category, type || 'Buy', mathQty, unitPrice);
         if (nameTrim && L.colName) sheet.getRange(foundRow, L.colName).setValue(nameTrim);
       } else if (category === 'NTD Stock' || category === 'NTD Preferred') {
         sheet.getRange(foundRow, L.colQty).setValue(newQty);
         sheet.getRange(foundRow, L.colNtd).setFormula('=' + qLet + foundRow + '*GOOGLEFINANCE("TPE:' + ticker + '","price")');
-        sheet.getRange(foundRow, L.colUsd).setFormula('=' + nLet + foundRow + '/32');
+        sheet.getRange(foundRow, L.colUsd).setFormula('=' + nLet + foundRow + '/' + FX_TWD_PER_USD_REF_);
         updateAvgCostAfterTrade_(sheet, L, foundRow, category, type || 'Buy', mathQty, unitPrice);
         if (nameTrim && L.colName) sheet.getRange(foundRow, L.colName).setValue(nameTrim);
       } else {
         if (category.startsWith('USD') || category === 'Loan') {
           var curUsd2 = Number(sheet.getRange(foundRow, L.colUsd).getValue()) || 0;
           sheet.getRange(foundRow, L.colUsd).setValue(curUsd2 + mathQty);
-          sheet.getRange(foundRow, L.colNtd).setFormula('=' + uLet + foundRow + '*32');
+          sheet.getRange(foundRow, L.colNtd).setFormula('=' + uLet + foundRow + '*' + FX_TWD_PER_USD_REF_);
         } else {
           var curNtd2 = Number(sheet.getRange(foundRow, L.colNtd).getValue()) || 0;
           sheet.getRange(foundRow, L.colNtd).setValue(curNtd2 + mathQty);
-          sheet.getRange(foundRow, L.colUsd).setFormula('=' + nLet + foundRow + '/32');
+          sheet.getRange(foundRow, L.colUsd).setFormula('=' + nLet + foundRow + '/' + FX_TWD_PER_USD_REF_);
         }
       }
     } else {
@@ -616,7 +648,7 @@ function doPost(e) {
       if (category === 'USD Stock') {
         sheet.getRange(newRow, L.colQty).setValue(newQty);
         sheet.getRange(newRow, L.colUsd).setFormula('=' + qLet + newRow + '*GOOGLEFINANCE("' + ticker + '","price")');
-        sheet.getRange(newRow, L.colNtd).setFormula('=' + uLet + newRow + '*32');
+        sheet.getRange(newRow, L.colNtd).setFormula('=' + uLet + newRow + '*' + FX_TWD_PER_USD_REF_);
         if (L.colCost) {
           if (unitPrice > 0) sheet.getRange(newRow, L.colCost).setValue(unitPrice);
           else sheet.getRange(newRow, L.colCost).setFormula('=INDEX(GOOGLEFINANCE("' + ticker + '","price",DATE(2025,1,1)),2,2)');
@@ -624,7 +656,7 @@ function doPost(e) {
       } else if (category === 'NTD Stock' || category === 'NTD Preferred') {
         sheet.getRange(newRow, L.colQty).setValue(newQty);
         sheet.getRange(newRow, L.colNtd).setFormula('=' + qLet + newRow + '*GOOGLEFINANCE("TPE:' + ticker + '","price")');
-        sheet.getRange(newRow, L.colUsd).setFormula('=' + nLet + newRow + '/32');
+        sheet.getRange(newRow, L.colUsd).setFormula('=' + nLet + newRow + '/' + FX_TWD_PER_USD_REF_);
         if (L.colCost) {
           if (unitPrice > 0) sheet.getRange(newRow, L.colCost).setValue(unitPrice);
           else sheet.getRange(newRow, L.colCost).setFormula('=INDEX(GOOGLEFINANCE("TPE:' + ticker + '","price",DATE(2025,1,1)),2,2)');
@@ -633,10 +665,10 @@ function doPost(e) {
         sheet.getRange(newRow, L.colQty).setValue('');
         if (category.startsWith('USD') || category === 'Loan') {
           sheet.getRange(newRow, L.colUsd).setValue(mathQty);
-          sheet.getRange(newRow, L.colNtd).setFormula('=' + uLet + newRow + '*32');
+          sheet.getRange(newRow, L.colNtd).setFormula('=' + uLet + newRow + '*' + FX_TWD_PER_USD_REF_);
         } else {
           sheet.getRange(newRow, L.colNtd).setValue(mathQty);
-          sheet.getRange(newRow, L.colUsd).setFormula('=' + nLet + newRow + '/32');
+          sheet.getRange(newRow, L.colUsd).setFormula('=' + nLet + newRow + '/' + FX_TWD_PER_USD_REF_);
         }
       }
     }

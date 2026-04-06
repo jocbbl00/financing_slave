@@ -33,8 +33,20 @@ const CHART_TOOLTIP_STYLE = {
   boxShadow: '0 10px 15px -3px rgba(0,0,0,0.4)',
 };
 
-const FX_RATES = { USD: 1, NTD: 32, JPY: 150 };
+/** Fallback before first API load; server sends live GOOGLEFINANCE rates in `fx`. */
+const DEFAULT_FX = { twdPerUsd: 32, jpyPerUsd: 150 };
+
 const CURRENCY_SYMBOLS = { USD: '$', NTD: 'NT$', JPY: '¥' };
+
+/** Pie stores wedge size in TWD-equivalent; convert to selected display currency. */
+function pieNtdEquivToDisplay(ntdEquiv, currency, fx) {
+  const twd = fx.twdPerUsd > 0 ? fx.twdPerUsd : DEFAULT_FX.twdPerUsd;
+  const jpy = fx.jpyPerUsd > 0 ? fx.jpyPerUsd : DEFAULT_FX.jpyPerUsd;
+  if (currency === 'NTD') return ntdEquiv;
+  const usd = ntdEquiv / twd;
+  if (currency === 'USD') return usd;
+  return usd * jpy;
+}
 
 // Friendly ticker name mappings
 const TICKER_NAMES = {
@@ -102,6 +114,7 @@ export default function App() {
   });
   const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+  const [fxRates, setFxRates] = useState(DEFAULT_FX);
   const [theme, setTheme] = useState(() =>
     typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
   );
@@ -120,6 +133,15 @@ export default function App() {
         : CHART_TOOLTIP_STYLE,
     [theme]
   );
+  const displayMult = useMemo(
+    () => ({
+      USD: 1,
+      NTD: fxRates.twdPerUsd > 0 ? fxRates.twdPerUsd : DEFAULT_FX.twdPerUsd,
+      JPY: fxRates.jpyPerUsd > 0 ? fxRates.jpyPerUsd : DEFAULT_FX.jpyPerUsd,
+    }),
+    [fxRates.twdPerUsd, fxRates.jpyPerUsd]
+  );
+
   const { narrow: isNarrow, height: viewportH } = useViewport();
   const poppedChartHeight = isNarrow ? Math.min(400, Math.round(viewportH * 0.52)) : 500;
   const collapsedChartHeight = isNarrow ? 260 : 250;
@@ -154,6 +176,13 @@ export default function App() {
       const res = await fetch(API_URL);
       const json = await res.json();
       
+      if (json.fx && typeof json.fx.twdPerUsd === 'number' && typeof json.fx.jpyPerUsd === 'number') {
+        setFxRates({
+          twdPerUsd: json.fx.twdPerUsd > 0 ? json.fx.twdPerUsd : DEFAULT_FX.twdPerUsd,
+          jpyPerUsd: json.fx.jpyPerUsd > 0 ? json.fx.jpyPerUsd : DEFAULT_FX.jpyPerUsd,
+        });
+      }
+
       if (json.status === 'success' && json.data) {
         // Map backend summary data (6 categories + Loan)
         const formatted = json.data.map(item => ({
@@ -185,22 +214,24 @@ export default function App() {
 
   const existingCategories = [...new Set(portfolio.map(p => p.category))];
 
+  const twdPerUsdSafe = fxRates.twdPerUsd > 0 ? fxRates.twdPerUsd : DEFAULT_FX.twdPerUsd;
+
   const totalUsdGross = portfolio.reduce((acc, curr) => {
     const isUsd = curr.category.startsWith('USD') || curr.category === 'Loan';
-    const val = isUsd ? curr.amount : curr.amount / 32;
+    const val = isUsd ? curr.amount : curr.amount / twdPerUsdSafe;
     return val > 0 ? acc + val : acc;
   }, 0);
 
   const totalUsdDebt = portfolio.reduce((acc, curr) => {
     const isUsd = curr.category.startsWith('USD') || curr.category === 'Loan';
-    const val = isUsd ? curr.amount : curr.amount / 32;
+    const val = isUsd ? curr.amount : curr.amount / twdPerUsdSafe;
     return val < 0 ? acc + Math.abs(val) : acc;
   }, 0);
 
   const totalUsdNet = totalUsdGross - totalUsdDebt;
 
   const fmt = (usdVal) => {
-    const converted = usdVal * FX_RATES[currency];
+    const converted = usdVal * displayMult[currency];
     return `${CURRENCY_SYMBOLS[currency]}${converted.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
   };
 
@@ -221,7 +252,9 @@ export default function App() {
   const pieData = enrichedPortfolio.map(a => ({
     name: a.category + (a.amount < 0 ? " (Debt)" : ""),
     rawAmount: a.amount,
-    value: Math.abs(a.category.startsWith('USD') ? a.amount * 32 : a.amount),
+    value: Math.abs(
+      a.category.startsWith('NTD') ? a.amount : a.amount * twdPerUsdSafe
+    ),
     fill: a.amount < 0 ? '#ef4444' : undefined // Custom fill hook for later versions, defaulting via pie mapping below
   }));
 
@@ -231,9 +264,9 @@ export default function App() {
     const label = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`;
     return {
       name: label,
-      gross: Math.round((h.gross || 0) * FX_RATES[currency]),
-      net: Math.round((h.net || 0) * FX_RATES[currency]),
-      debt: Math.round((h.debt || 0) * FX_RATES[currency]),
+      gross: Math.round((h.gross || 0) * displayMult[currency]),
+      net: Math.round((h.net || 0) * displayMult[currency]),
+      debt: Math.round((h.debt || 0) * displayMult[currency]),
     };
   });
 
@@ -606,7 +639,9 @@ export default function App() {
                     ))}
                   </Pie>
                   <Tooltip 
-                    formatter={(value) => `${CURRENCY_SYMBOLS[currency]}${(value * FX_RATES[currency] / 32).toLocaleString(undefined, {maximumFractionDigits: 0})}`} 
+                    formatter={(value) =>
+                      `${CURRENCY_SYMBOLS[currency]}${pieNtdEquivToDisplay(value, currency, fxRates).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+                    } 
                     contentStyle={chartTooltipStyle}
                   />
                 </PieChart>
