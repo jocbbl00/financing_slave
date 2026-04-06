@@ -40,8 +40,8 @@ const CURRENCY_SYMBOLS = { USD: '$', NTD: 'NT$', JPY: '¥' };
 
 const RADIAN = Math.PI / 180;
 
-function renderPieLabel({ cx, cy, midAngle, outerRadius, percent, index }) {
-  if (percent < 0.03) return null;
+function renderPieLabel({ cx, cy, midAngle, outerRadius, name, percent, index }) {
+  if (percent < 0.01) return null;
   const gap = 14;
   const lineEnd = outerRadius + gap;
   const labelR = outerRadius + gap + 4;
@@ -61,7 +61,7 @@ function renderPieLabel({ cx, cy, midAngle, outerRadius, percent, index }) {
       <circle cx={ex} cy={ey} r={2} fill="var(--text-tertiary)" />
       <text x={lx + (lx > cx ? 4 : -4)} y={ly} textAnchor={textAnchor} dominantBaseline="central"
         style={{ fontSize: '0.65rem', fill: 'var(--text-secondary)', fontWeight: 600 }}>
-        {pct}
+        {name} {pct}
       </text>
     </g>
   );
