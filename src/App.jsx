@@ -825,28 +825,34 @@ export default function App() {
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.55 }}>
               Templates personalize with your holdings from the sheet. This is not a live AI feed — refresh after updating the spreadsheet to see numbers and names change.
             </p>
-            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-              <div style={{ flex: '1', background: 'rgba(16, 185, 129, 0.12)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(52, 211, 153, 0.25)', borderLeft: '4px solid #34d399', minWidth: '280px' }}>
-                <h3 style={{ color: '#6ee7b7', marginBottom: '1rem' }}>🛒 Buy / Accumulate</h3>
+            <div className="advice-suggestion-columns">
+              <div className="advice-suggestion-panel advice-suggestion-panel--buy">
+                <h3 className="advice-suggestion-panel__heading">🛒 Buy / Accumulate</h3>
                 {suggestions.buys.map((s, i) => (
-                  <div key={i} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: i < suggestions.buys.length - 1 ? '1px solid rgba(52, 211, 153, 0.2)' : 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                      <span style={{ background: s.action === 'BUY' ? '#059669' : '#d97706', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>{s.action}</span>
-                      <strong style={{ color: '#ecfdf5', fontSize: '1rem' }}>{s.ticker}</strong>
+                  <div
+                    key={i}
+                    className={`advice-suggestion-row advice-suggestion-row--buy${i < suggestions.buys.length - 1 ? ' advice-suggestion-row--border-buy' : ''}`}
+                  >
+                    <div className="advice-suggestion-row__meta">
+                      <span className={`advice-suggestion-badge ${s.action === 'BUY' ? 'advice-suggestion-badge--buy' : 'advice-suggestion-badge--hold'}`}>{s.action}</span>
+                      <strong className="advice-suggestion-ticker advice-suggestion-ticker--buy">{s.ticker}</strong>
                     </div>
-                    <p style={{ color: '#d1fae5', fontSize: '0.85rem', lineHeight: '1.6', margin: 0 }}>{s.reason}</p>
+                    <p className="advice-suggestion-reason advice-suggestion-reason--buy">{s.reason}</p>
                   </div>
                 ))}
               </div>
-              <div style={{ flex: '1', background: 'rgba(239, 68, 68, 0.1)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(248, 113, 113, 0.25)', borderLeft: '4px solid #f87171', minWidth: '280px' }}>
-                <h3 style={{ color: '#fca5a5', marginBottom: '1rem' }}>📉 Sell / Trim</h3>
+              <div className="advice-suggestion-panel advice-suggestion-panel--sell">
+                <h3 className="advice-suggestion-panel__heading">📉 Sell / Trim</h3>
                 {suggestions.sells.map((s, i) => (
-                  <div key={i} style={{ marginBottom: '1rem', paddingBottom: '1rem', borderBottom: i < suggestions.sells.length - 1 ? '1px solid rgba(248, 113, 113, 0.2)' : 'none' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.4rem' }}>
-                      <span style={{ background: s.action === 'SELL' ? '#dc2626' : '#d97706', color: '#fff', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.7rem', fontWeight: 700 }}>{s.action}</span>
-                      <strong style={{ color: '#fef2f2', fontSize: '1rem' }}>{s.ticker}</strong>
+                  <div
+                    key={i}
+                    className={`advice-suggestion-row advice-suggestion-row--sell${i < suggestions.sells.length - 1 ? ' advice-suggestion-row--border-sell' : ''}`}
+                  >
+                    <div className="advice-suggestion-row__meta">
+                      <span className={`advice-suggestion-badge ${s.action === 'SELL' ? 'advice-suggestion-badge--sell' : 'advice-suggestion-badge--trim'}`}>{s.action}</span>
+                      <strong className="advice-suggestion-ticker advice-suggestion-ticker--sell">{s.ticker}</strong>
                     </div>
-                    <p style={{ color: '#fecaca', fontSize: '0.85rem', lineHeight: '1.6', margin: 0 }}>{s.reason}</p>
+                    <p className="advice-suggestion-reason advice-suggestion-reason--sell">{s.reason}</p>
                   </div>
                 ))}
               </div>
@@ -877,7 +883,8 @@ export default function App() {
                              href={link.url} 
                              target="_blank" 
                              rel="noopener noreferrer" 
-                             style={{ color: '#93c5fd', fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                             className="advice-market-link"
+                             style={{ fontWeight: 600, fontSize: '0.95rem', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                            >
                              🔗 {link.text}
                            </a>

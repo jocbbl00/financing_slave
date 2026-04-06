@@ -301,6 +301,173 @@ header p {
   }
 }
 
+/* Investment Suggestions: theme-aware text (high contrast in day mode) */
+.advice-suggestion-columns {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.advice-suggestion-panel {
+  flex: 1;
+  min-width: 280px;
+  padding: 1.5rem;
+  border-radius: 12px;
+}
+
+.advice-suggestion-panel--buy {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-left: 4px solid #34d399;
+}
+
+.advice-suggestion-panel--sell {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  border-left: 4px solid #f87171;
+}
+
+.advice-suggestion-panel__heading {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.advice-suggestion-panel--buy .advice-suggestion-panel__heading {
+  color: #6ee7b7;
+}
+
+.advice-suggestion-panel--sell .advice-suggestion-panel__heading {
+  color: #fca5a5;
+}
+
+.advice-suggestion-row {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+}
+
+.advice-suggestion-row:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.advice-suggestion-row--border-buy {
+  border-bottom: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.advice-suggestion-row--border-sell {
+  border-bottom: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+.advice-suggestion-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.advice-suggestion-badge {
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.advice-suggestion-badge--buy {
+  background: #059669;
+}
+
+.advice-suggestion-badge--hold,
+.advice-suggestion-badge--trim {
+  background: #d97706;
+}
+
+.advice-suggestion-badge--sell {
+  background: #dc2626;
+}
+
+.advice-suggestion-ticker {
+  font-size: 1rem;
+}
+
+.advice-suggestion-ticker--buy {
+  color: #ecfdf5;
+}
+
+.advice-suggestion-ticker--sell {
+  color: #fef2f2;
+}
+
+.advice-suggestion-reason {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.advice-suggestion-reason--buy {
+  color: #d1fae5;
+}
+
+.advice-suggestion-reason--sell {
+  color: #fecaca;
+}
+
+html[data-theme="light"] .advice-suggestion-panel--buy {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(5, 150, 105, 0.35);
+}
+
+html[data-theme="light"] .advice-suggestion-panel--sell {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(220, 38, 38, 0.28);
+}
+
+html[data-theme="light"] .advice-suggestion-panel--buy .advice-suggestion-panel__heading {
+  color: #047857;
+}
+
+html[data-theme="light"] .advice-suggestion-panel--sell .advice-suggestion-panel__heading {
+  color: #b91c1c;
+}
+
+html[data-theme="light"] .advice-suggestion-ticker--buy {
+  color: #064e3b;
+}
+
+html[data-theme="light"] .advice-suggestion-ticker--sell {
+  color: #7f1d1d;
+}
+
+html[data-theme="light"] .advice-suggestion-reason--buy {
+  color: #14532d;
+}
+
+html[data-theme="light"] .advice-suggestion-reason--sell {
+  color: #7f1d1d;
+}
+
+html[data-theme="light"] .advice-suggestion-row--border-buy {
+  border-bottom-color: rgba(5, 150, 105, 0.25);
+}
+
+html[data-theme="light"] .advice-suggestion-row--border-sell {
+  border-bottom-color: rgba(220, 38, 38, 0.22);
+}
+
+.advice-market-link {
+  color: #93c5fd;
+}
+
+html[data-theme="light"] .advice-market-link {
+  color: #1d4ed8;
+}
+
+html[data-theme="light"] .advice-market-link:hover {
+  color: #1e40af;
+  text-decoration: underline;
+}
+
 /* Overview / Portfolio Advice / Stock Holdings — equal flex columns, no horizontal scroll on phone */
 .main-tabs {
   display: flex;
