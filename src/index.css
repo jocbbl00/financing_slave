@@ -27,6 +27,8 @@
   --surface-input-border: #334155;
   --modal-bg: #151c2c;
   --modal-border: rgba(234, 179, 8, 0.15);
+  --tab-bar-border: rgba(51, 65, 85, 0.6);
+  --tab-btn-active-border: var(--accent-yellow);
 }
 
 * {
@@ -59,7 +61,12 @@ button {
   border: none;
   background: none;
   font-family: var(--font-family);
-  transition: var(--transition);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .app-container {
@@ -86,7 +93,13 @@ button {
   border-radius: 24px;
   padding: 2rem;
   box-shadow: var(--card-shadow);
-  transition: var(--transition);
+  /* Color-only: avoids layout shift when switching light/dark (no transition: all). */
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -107,6 +120,8 @@ header {
   margin-bottom: 1rem;
   flex-wrap: wrap;
   gap: 1rem;
+  width: 100%;
+  max-width: 100%;
 }
 
 header h1 {
@@ -121,6 +136,50 @@ header p {
   font-size: 1rem;
 }
 
+/* Overview / Portfolio Advice / Stock Holdings — equal flex columns, no horizontal scroll on phone */
+.main-tabs {
+  display: flex;
+  margin-top: 1.5rem;
+  border-bottom: 2px solid var(--tab-bar-border);
+  width: 100%;
+  max-width: 100%;
+  gap: 0;
+}
+
+.main-tabs__btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.55rem 0.15rem;
+  border: none;
+  background: transparent;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  font-size: clamp(0.62rem, 2.85vw, 1rem);
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: color 0.15s ease, border-bottom-color 0.15s ease;
+}
+
+.main-tabs__btn--active {
+  border-bottom-color: var(--tab-btn-active-border);
+  color: var(--text-primary);
+}
+
+@media (min-width: 769px) {
+  .main-tabs__btn {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+}
+
 .primary-btn {
   background: linear-gradient(135deg, #ca8a04 0%, #eab308 100%);
   color: #0f172a;
@@ -132,6 +191,13 @@ header p {
   align-items: center;
   gap: 0.5rem;
   box-shadow: 0 4px 14px 0 rgba(234, 179, 8, 0.25);
+  min-height: 2.75rem;
+  box-sizing: border-box;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .primary-btn:hover {
@@ -566,6 +632,7 @@ html[data-theme="light"] {
   --surface-input-border: #cbd5e1;
   --modal-bg: #ffffff;
   --modal-border: rgba(203, 213, 225, 0.95);
+  --tab-bar-border: rgba(148, 163, 184, 0.5);
 }
 
 html[data-theme="light"] .primary-btn {
@@ -620,6 +687,7 @@ html[data-theme="light"] .progress-track {
 .theme-toggle {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
   padding: 0.35rem 0.65rem;
   border-radius: 9999px;
@@ -630,7 +698,9 @@ html[data-theme="light"] .progress-track {
   color: var(--text-secondary);
   cursor: pointer;
   font-family: var(--font-family);
-  transition: var(--transition);
+  /* Same footprint in Day vs Night so header/toolbar does not reflow */
+  min-width: 6.75rem;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .theme-toggle:hover {

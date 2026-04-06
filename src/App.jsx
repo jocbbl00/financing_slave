@@ -542,23 +542,15 @@ export default function App() {
             Add Stock
           </button>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderBottom: '2px solid rgba(51, 65, 85, 0.6)', width: '100%', overflowX: 'auto' }}>
-          {['Overview', 'Portfolio Advice', 'Stock Holdings'].map(tab => (
+        <div className="main-tabs" role="tablist" aria-label="Main sections">
+          {['Overview', 'Portfolio Advice', 'Stock Holdings'].map((tab) => (
             <button
               key={tab}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab}
+              className={`main-tabs__btn${activeTab === tab ? ' main-tabs__btn--active' : ''}`}
               onClick={() => setActiveTab(tab)}
-              style={{
-                padding: '0.75rem 1rem',
-                border: 'none',
-                background: 'transparent',
-                borderBottom: activeTab === tab ? '3px solid var(--accent-yellow)' : '3px solid transparent',
-                color: activeTab === tab ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                fontWeight: activeTab === tab ? 700 : 500,
-                cursor: 'pointer',
-                fontSize: '1rem',
-                transition: 'all 0.2s',
-                whiteSpace: 'nowrap'
-              }}
             >
               {tab}
             </button>
