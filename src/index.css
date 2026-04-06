@@ -520,3 +520,97 @@ header p {
 .glass-card:has(.popped-out):hover {
   transform: none !important;
 }
+
+/* ─── Day (light) theme ─── */
+html[data-theme="light"] {
+  --bg-base: #faf6ed;
+  --bg-gradient: linear-gradient(155deg, #fffdf8 0%, #faf3dc 42%, #f3e4b8 100%);
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-tertiary: #64748b;
+  --accent-yellow: #ca8a04;
+  --accent-yellow-dim: #a16207;
+  --accent-color: #ca8a04;
+  --accent-hover: #eab308;
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --glass-bg: rgba(255, 255, 255, 0.58);
+  --glass-border: rgba(255, 255, 255, 0.85);
+  --card-shadow: 0 8px 32px 0 rgba(15, 23, 42, 0.08);
+  --surface-deep: #f1f5f9;
+  --surface-input: #f8fafc;
+  --surface-input-border: #cbd5e1;
+  --modal-bg: #ffffff;
+  --modal-border: rgba(203, 213, 225, 0.95);
+}
+
+html[data-theme="light"] .primary-btn {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #fff;
+  box-shadow: 0 4px 14px 0 rgba(15, 23, 42, 0.15);
+}
+
+html[data-theme="light"] .primary-btn:hover {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.2);
+}
+
+html[data-theme="light"] .primary-btn.secondary {
+  background: #fff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
+html[data-theme="light"] .primary-btn.secondary:hover {
+  background: #f8fafc;
+  border-color: rgba(202, 138, 4, 0.35);
+}
+
+html[data-theme="light"] .modal-overlay {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+html[data-theme="light"] .popped-out-backdrop {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+html[data-theme="light"] .glass-card.popped-out {
+  background: rgba(255, 253, 248, 0.96) !important;
+  border: 1px solid rgba(234, 212, 160, 0.55) !important;
+  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.15) !important;
+}
+
+html[data-theme="light"] .glass-card.popped-out:hover {
+  background: rgba(255, 253, 248, 0.96) !important;
+}
+
+html[data-theme="light"] .recharts-cartesian-grid line {
+  stroke: #cbd5e1;
+  opacity: 0.6;
+}
+
+html[data-theme="light"] .progress-track {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: var(--transition);
+}
+
+.theme-toggle:hover {
+  color: var(--text-primary);
+  border-color: rgba(234, 179, 8, 0.35);
+}

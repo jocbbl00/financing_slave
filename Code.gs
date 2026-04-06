@@ -91,6 +91,7 @@ function readLoansForApi_(loansSheet) {
 function syncLoansToPortfolio_(spreadsheet) {
   var portfolioSheet = spreadsheet.getSheetByName('Portfolio');
   if (!portfolioSheet) return;
+  var L = getPortfolioLayout_(portfolioSheet);
   var loansSheet = ensureLoansSheet_(spreadsheet);
   var last = loansSheet.getLastRow();
   if (last < 2) return;
@@ -115,9 +116,11 @@ function syncLoansToPortfolio_(spreadsheet) {
       for (var i = 0; i < pData.length; i++) {
         if (pData[i][0] === 'Loan' && String(pData[i][1]).trim() === ticker) {
           var rowIdx = i + 2;
-          portfolioSheet.getRange(rowIdx, 5).setValue(-Math.abs(bal));
-          portfolioSheet.getRange(rowIdx, 4).setFormula('=E' + rowIdx + '/32');
-          portfolioSheet.getRange(rowIdx, 3).setValue('');
+          portfolioSheet.getRange(rowIdx, L.colNtd).setValue(-Math.abs(bal));
+          portfolioSheet.getRange(rowIdx, L.colUsd).setFormula('=' + columnToLetter_(L.colNtd) + rowIdx + '/32');
+          portfolioSheet.getRange(rowIdx, L.colQty).setValue('');
+          if (L.colName) portfolioSheet.getRange(rowIdx, L.colName).setValue('');
+          if (L.colCost) portfolioSheet.getRange(rowIdx, L.colCost).clearContent();
           found = true;
           break;
         }
@@ -125,13 +128,105 @@ function syncLoansToPortfolio_(spreadsheet) {
     }
     if (!found) {
       var newRow = pLast < 2 ? 2 : pLast + 1;
-      portfolioSheet.getRange(newRow, 1).setValue('Loan');
-      portfolioSheet.getRange(newRow, 2).setValue(ticker);
-      portfolioSheet.getRange(newRow, 3).setValue('');
-      portfolioSheet.getRange(newRow, 5).setValue(-Math.abs(bal));
-      portfolioSheet.getRange(newRow, 4).setFormula('=E' + newRow + '/32');
+      portfolioSheet.getRange(newRow, L.colCat).setValue('Loan');
+      portfolioSheet.getRange(newRow, L.colTick).setValue(ticker);
+      if (L.colName) portfolioSheet.getRange(newRow, L.colName).setValue('');
+      portfolioSheet.getRange(newRow, L.colQty).setValue('');
+      portfolioSheet.getRange(newRow, L.colNtd).setValue(-Math.abs(bal));
+      portfolioSheet.getRange(newRow, L.colUsd).setFormula('=' + columnToLetter_(L.colNtd) + newRow + '/32');
     }
   }
+}
+
+/** 1-based column indices for Portfolio sheet (legacy: Qty in col C; new: DisplayName col C, Qty col D). */
+function getPortfolioLayout_(sheet) {
+  if (!sheet || sheet.getLastRow() < 1) {
+    return { colCat: 1, colTick: 2, colName: 3, colQty: 4, colUsd: 5, colNtd: 6, colCost: 7, readWidth: 7, hasName: true };
+  }
+  var nc = Math.max(5, Math.min(sheet.getLastColumn(), 8));
+  var header = sheet.getRange(1, 1, 1, nc).getValues()[0];
+  var h2 = String(header[2] || '').trim();
+  if (h2 === 'Qty') {
+    return {
+      colCat: 1, colTick: 2, colName: 0, colQty: 3, colUsd: 4, colNtd: 5,
+      colCost: nc >= 6 ? 6 : 0, readWidth: Math.max(6, nc), hasName: false
+    };
+  }
+  return { colCat: 1, colTick: 2, colName: 3, colQty: 4, colUsd: 5, colNtd: 6, colCost: 7, readWidth: 7, hasName: true };
+}
+
+function columnToLetter_(col) {
+  var s = '';
+  var c = col;
+  while (c > 0) {
+    var r = (c - 1) % 26;
+    s = String.fromCharCode(65 + r) + s;
+    c = Math.floor((c - 1) / 26);
+  }
+  return s;
+}
+
+function ensureTransactionsSchema_(txSheet) {
+  if (!txSheet) return;
+  var a1 = String(txSheet.getRange(1, 1).getValue() || '').trim();
+  if (a1 === 'TxID') return;
+  var lr = txSheet.getLastRow();
+  if (lr < 1) {
+    txSheet.getRange(1, 1, 1, 7).setValues([['TxID', 'Date', 'Category', 'Ticker', 'Qty', 'Type', 'UnitPrice']]);
+    txSheet.getRange(1, 1, 1, 7).setFontWeight('bold');
+    return;
+  }
+  if (a1 !== 'Date') return;
+  var lc = Math.max(6, txSheet.getLastColumn());
+  var data = txSheet.getRange(1, 1, lr, lc).getValues();
+  txSheet.clear();
+  txSheet.getRange(1, 1, 1, 7).setValues([['TxID', 'Date', 'Category', 'Ticker', 'Qty', 'Type', 'UnitPrice']]);
+  txSheet.getRange(1, 1, 1, 7).setFontWeight('bold');
+  for (var r = 1; r < data.length; r++) {
+    var row = data[r];
+    txSheet.getRange(r + 1, 1, r + 1, 7).setValues([[
+      r,
+      row[0],
+      row[1],
+      row[2],
+      row[3],
+      row[4] || 'Buy',
+      row[5] != null && row[5] !== '' ? row[5] : 0
+    ]]);
+  }
+}
+
+function nextTxId_(txSheet) {
+  var lr = txSheet.getLastRow();
+  if (lr < 2) return 1;
+  var ids = txSheet.getRange(2, 1, lr, 1).getValues();
+  var m = 0;
+  for (var i = 0; i < ids.length; i++) {
+    var v = Number(ids[i][0]);
+    if (!isNaN(v) && v > m) m = v;
+  }
+  return m + 1;
+}
+
+/** Weighted average cost per share after a buy; sells keep prior avg. Opening basis stays GOOGLEFINANCE 2025-01-01 until a buy with unit price. */
+function updateAvgCostAfterTrade_(sheet, L, rowIdx, category, type, mathQty, unitPrice) {
+  if (category !== 'USD Stock' && category !== 'NTD Stock' && category !== 'NTD Preferred') return;
+  if (!L.colCost) return;
+  var qCell = sheet.getRange(rowIdx, L.colQty);
+  var cCell = sheet.getRange(rowIdx, L.colCost);
+  var newQty = Number(qCell.getValue()) || 0;
+  if (newQty <= 0) {
+    cCell.clearContent();
+    return;
+  }
+  if (type === 'Sell' || mathQty < 0) return;
+  if (!(Number(unitPrice) > 0 && mathQty > 0)) return;
+  var pq = newQty - mathQty;
+  if (pq < 0) pq = 0;
+  var oldAvg = Number(cCell.getValue());
+  if (isNaN(oldAvg)) oldAvg = 0;
+  var newAvg = pq <= 0 ? Number(unitPrice) : (pq * oldAvg + mathQty * Number(unitPrice)) / newQty;
+  cCell.setValue(Math.round(newAvg * 10000) / 10000);
 }
 
 function doGet(e) {
@@ -142,33 +237,44 @@ function doGet(e) {
   const loansApi = loansSheet ? readLoansForApi_(loansSheet) : [];
 
   const txSheet = spreadsheet.getSheetByName('Transactions');
+  if (txSheet) ensureTransactionsSchema_(txSheet);
+
   const portfolioSheet = spreadsheet.getSheetByName('Portfolio');
-  
-  // Read Portfolio sheet (individual holdings)
+  const L = portfolioSheet ? getPortfolioLayout_(portfolioSheet) : null;
+
   let portfolio = [];
-  if (portfolioSheet) {
+  if (portfolioSheet && L) {
     const lastRow = portfolioSheet.getLastRow();
     if (lastRow >= 2) {
-      const rawData = portfolioSheet.getRange(2, 1, lastRow - 1, 6).getValues();
+      const w = Math.max(L.readWidth, 6);
+      const rawData = portfolioSheet.getRange(2, 1, lastRow, w).getValues();
       portfolio = rawData
-        .filter(row => row[0] !== '')
-        .map((row, index) => {
-          let histPriceStr = row[5];
-          const isStock = row[0] === 'USD Stock' || row[0] === 'NTD Stock' || row[0] === 'NTD Preferred';
-          
-          if (!histPriceStr && isStock) {
-             const tickerPrefix = (row[0] === 'NTD Stock' || row[0] === 'NTD Preferred') ? `"TPE:${row[1]}"` : `"${row[1]}"`;
-             portfolioSheet.getRange(index + 2, 6).setFormula(`=INDEX(GOOGLEFINANCE(${tickerPrefix},"price",DATE(2025,1,1)),2,2)`);
-             histPriceStr = 0;
+        .filter(function (row) { return row[L.colCat - 1] !== ''; })
+        .map(function (row, index) {
+          var cat = row[L.colCat - 1];
+          var tick = row[L.colTick - 1];
+          var disp = L.colName ? row[L.colName - 1] : '';
+          var qty = row[L.colQty - 1];
+          var usd = row[L.colUsd - 1];
+          var ntd = row[L.colNtd - 1];
+          var costCell = L.colCost ? row[L.colCost - 1] : '';
+          var isStock = cat === 'USD Stock' || cat === 'NTD Stock' || cat === 'NTD Preferred';
+
+          if (isStock && L.colCost && (costCell === '' || costCell === null)) {
+            var r = index + 2;
+            var tickerPrefix = (cat === 'NTD Stock' || cat === 'NTD Preferred') ? '"TPE:' + tick + '"' : '"' + tick + '"';
+            portfolioSheet.getRange(r, L.colCost).setFormula('=INDEX(GOOGLEFINANCE(' + tickerPrefix + ',"price",DATE(2025,1,1)),2,2)');
+            costCell = 0;
           }
 
           return {
-            category: row[0] === 'NTD Preferred' ? 'NTD Stock' : row[0],   // e.g. "USD Stock", "NTD Cash", "Loan", handling legacy NTD Preferred
-            ticker: row[1],     // e.g. "AAPL", "Firstrade", "NTD Loan"
-            qty: row[2],        // shares or blank for cash
-            usdValue: row[3],   // computed by GOOGLEFINANCE formula or static
-            ntdValue: row[4],   // computed or static
-            histPrice: histPriceStr
+            category: cat === 'NTD Preferred' ? 'NTD Stock' : cat,
+            ticker: tick,
+            displayName: disp != null ? String(disp) : '',
+            qty: qty,
+            usdValue: usd,
+            ntdValue: ntd,
+            histPrice: costCell
           };
         });
     }
@@ -242,18 +348,18 @@ function doGet(e) {
     }));
   }
 
-  // Fetch Transactions for legacy chart
   let txData = [];
-  if (txSheet) {
-    const txLastRow = txSheet.getLastRow();
-    if (txLastRow >= 2) {
-      const rawTx = txSheet.getRange(2, 1, txLastRow - 1, 3).getValues();
-      txData = rawTx.map(row => ({
-        date: row[0],
-        category: row[1],
-        amount: row[2]
-      }));
-    }
+  if (txSheet && txSheet.getLastRow() >= 2) {
+    const rawTx = txSheet.getRange(2, 1, txSheet.getLastRow(), 7).getValues();
+    txData = rawTx.map(row => ({
+      txId: row[0],
+      date: row[1],
+      category: row[2],
+      ticker: row[3],
+      qty: row[4],
+      type: row[5],
+      unitPrice: row[6]
+    }));
   }
   
   return ContentService.createTextOutput(JSON.stringify({
@@ -286,36 +392,41 @@ function doPost(e) {
       sheet.clear();
     }
     
-    // Header row
-    sheet.getRange(1, 1, 1, 5).setValues([['Category', 'Ticker', 'Qty', 'USD Value', 'NTD Value']]);
-    // Bold header
-    sheet.getRange(1, 1, 1, 5).setFontWeight('bold');
-    
+    sheet.getRange(1, 1, 1, 7).setValues([[
+      'Category', 'Ticker', 'DisplayName', 'Qty', 'USD Value', 'NTD Value', 'AvgCost (per share)'
+    ]]);
+    sheet.getRange(1, 1, 1, 7).setFontWeight('bold');
+
     const rows = requestData.data;
     if (rows && rows.length > 0) {
-      // We need to detect formula strings (starting with '=') and use setFormulas for those cells
-      const range = sheet.getRange(2, 1, rows.length, 5);
-      
-      // First set all values
-      const cleanRows = rows.map(row => row.map(cell => {
-        if (typeof cell === 'string' && cell.startsWith('=')) return ''; // placeholder
-        return cell;
-      }));
+      const range = sheet.getRange(2, 1, rows.length + 1, 7);
+      const cleanRows = rows.map(row => {
+        let src = row;
+        if (row.length <= 5) {
+          src = [row[0], row[1], '', row[2], row[3], row[4], ''];
+        }
+        const out = new Array(7);
+        for (let c = 0; c < 7; c++) {
+          const cell = c < src.length ? src[c] : '';
+          out[c] = (typeof cell === 'string' && cell.startsWith('=')) ? '' : cell;
+        }
+        return out;
+      });
       range.setValues(cleanRows);
-      
-      // Then set individual formula cells
       for (let r = 0; r < rows.length; r++) {
-        for (let c = 0; c < 5; c++) {
-          const cell = rows[r][c];
+        let src = rows[r];
+        if (rows[r].length <= 5) {
+          src = [rows[r][0], rows[r][1], '', rows[r][2], rows[r][3], rows[r][4], ''];
+        }
+        for (let c = 0; c < Math.min(src.length, 7); c++) {
+          const cell = src[c];
           if (typeof cell === 'string' && cell.startsWith('=')) {
             sheet.getRange(2 + r, 1 + c).setFormula(cell);
           }
         }
       }
     }
-    
-    // Auto-resize columns
-    for (let i = 1; i <= 5; i++) sheet.autoResizeColumn(i);
+    for (let i = 1; i <= 7; i++) sheet.autoResizeColumn(i);
     
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success',
@@ -383,19 +494,19 @@ function doPost(e) {
 
   // ===== UPDATE CASH: Update a specific cash/preferred/debt account amount =====
   if (requestData.action === 'update_cash') {
-    const { ticker, amount, currency } = requestData; // ticker = account name, amount = new balance
+    const { ticker, amount, currency } = requestData;
     let sheet = spreadsheet.getSheetByName('Portfolio');
     if (!sheet) {
       return ContentService.createTextOutput(JSON.stringify({ error: "Portfolio sheet not found" })).setMimeType(ContentService.MimeType.JSON);
     }
-    
+    const L = getPortfolioLayout_(sheet);
     const lastRow = sheet.getLastRow();
-    const data = sheet.getRange(2, 1, lastRow - 1, 5).getValues();
-    
+    const data = sheet.getRange(2, 1, lastRow, L.readWidth).getValues();
+
     let found = false;
     for (let i = 0; i < data.length; i++) {
-      if (data[i][1] === ticker) { // match by ticker/account name
-        if (data[i][0] === 'Loan') {
+      if (data[i][L.colTick - 1] === ticker) {
+        if (data[i][L.colCat - 1] === 'Loan') {
           return ContentService.createTextOutput(JSON.stringify({
             status: 'error',
             message: 'Loan balances are computed from the Loans sheet. Use Add Loan or edit the Loans tab.'
@@ -403,12 +514,14 @@ function doPost(e) {
         }
         found = true;
         const rowIdx = i + 2;
-        if (currency === 'USD' || data[i][0].startsWith('USD')) {
-          sheet.getRange(rowIdx, 4).setValue(Number(amount));       // USD Value
-          sheet.getRange(rowIdx, 5).setFormula(`=D${rowIdx}*32`);   // NTD Value
+        const uLet = columnToLetter_(L.colUsd);
+        const nLet = columnToLetter_(L.colNtd);
+        if (currency === 'USD' || String(data[i][L.colCat - 1]).startsWith('USD')) {
+          sheet.getRange(rowIdx, L.colUsd).setValue(Number(amount));
+          sheet.getRange(rowIdx, L.colNtd).setFormula('=' + uLet + rowIdx + '*32');
         } else {
-          sheet.getRange(rowIdx, 5).setValue(Number(amount));       // NTD Value
-          sheet.getRange(rowIdx, 4).setFormula(`=E${rowIdx}/32`);   // USD Value
+          sheet.getRange(rowIdx, L.colNtd).setValue(Number(amount));
+          sheet.getRange(rowIdx, L.colUsd).setFormula('=' + nLet + rowIdx + '/32');
         }
         break;
       }
@@ -427,112 +540,97 @@ function doPost(e) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
   
-  // ===== UPDATE LEDGER: Core Transaction & Portfolio holding append/update =====
+  // ===== UPDATE LEDGER: Add stock / adjust quantity; log transaction with ID & unit price =====
   if (requestData.action === 'update_ledger') {
     const { category, ticker, qty, date, type, price } = requestData;
-    
-    // Determine mathematical quantity
     const mathQty = (type === 'Sell') ? -Math.abs(Number(qty)) : Number(qty);
-    
-    // 1. Log to Transactions
-    let txSheet = spreadsheet.getSheetByName('Transactions');
-    if(!txSheet) {
-      txSheet = spreadsheet.insertSheet('Transactions');
-      txSheet.appendRow(['Date', 'Category', 'Ticker', 'Amount', 'Type', 'Price']);
-    } else {
-      // Ensure header has Type and Price
-      const header = txSheet.getRange(1, 1, 1, txSheet.getLastColumn()).getValues()[0];
-      if (header.length < 5 || header[4] !== 'Type') {
-        txSheet.getRange(1, 5).setValue('Type');
-        txSheet.getRange(1, 6).setValue('Price');
-      }
-    }
-    const insertDate = date ? new Date(date) : new Date();
-    txSheet.appendRow([insertDate, category, ticker, mathQty, type || 'Buy', price || 0]);
+    const unitPrice = Number(price) || 0;
 
-    // 2. Update Portfolio
+    let txSheet = spreadsheet.getSheetByName('Transactions');
+    if (!txSheet) txSheet = spreadsheet.insertSheet('Transactions');
+    ensureTransactionsSchema_(txSheet);
+    const insertDate = date ? new Date(date) : new Date();
+    const tid = nextTxId_(txSheet);
+    txSheet.appendRow([tid, insertDate, category, ticker, mathQty, type || 'Buy', unitPrice]);
+
     let sheet = spreadsheet.getSheetByName('Portfolio');
     if (!sheet) {
       return ContentService.createTextOutput(JSON.stringify({ error: "Portfolio sheet not found" })).setMimeType(ContentService.MimeType.JSON);
     }
-    
+    const L = getPortfolioLayout_(sheet);
     const lastRow = sheet.getLastRow();
     let foundRow = -1;
     let newQty = mathQty;
     let oldQty = 0;
 
     if (lastRow >= 2) {
-      const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+      const data = sheet.getRange(2, 1, lastRow, L.readWidth).getValues();
       for (let i = 0; i < data.length; i++) {
-        if (data[i][1] === ticker && data[i][0] === category) {
+        if (data[i][L.colTick - 1] === ticker && data[i][L.colCat - 1] === category) {
           foundRow = i + 2;
-          oldQty = Number(data[i][2]);
+          oldQty = Number(data[i][L.colQty - 1]) || 0;
           newQty = oldQty + mathQty;
           break;
         }
       }
     }
 
+    const qLet = columnToLetter_(L.colQty);
+    const uLet = columnToLetter_(L.colUsd);
+    const nLet = columnToLetter_(L.colNtd);
+
     if (foundRow > -1) {
-      // Update existing row
-      sheet.getRange(foundRow, 3).setValue(newQty);
       if (category === 'USD Stock') {
-        sheet.getRange(foundRow, 4).setFormula(`=${newQty}*GOOGLEFINANCE("${ticker}","price")`);
-        sheet.getRange(foundRow, 5).setFormula(`=D${foundRow}*32`);
-        if (type !== 'Sell' && Number(price) > 0 && newQty > 0) {
-          const oldCb = Number(sheet.getRange(foundRow, 6).getValue()) || 0;
-          const newCb = ((oldQty * oldCb) + (mathQty * Number(price))) / newQty;
-          sheet.getRange(foundRow, 6).setValue(newCb);
-        }
-      } else if (category === 'NTD Stock') {
-        sheet.getRange(foundRow, 5).setFormula(`=${newQty}*GOOGLEFINANCE("TPE:${ticker}","price")`);
-        sheet.getRange(foundRow, 4).setFormula(`=E${foundRow}/32`);
-        if (type !== 'Sell' && Number(price) > 0 && newQty > 0) {
-          const oldCb = Number(sheet.getRange(foundRow, 6).getValue()) || 0;
-          const newCb = ((oldQty * oldCb) + (mathQty * Number(price))) / newQty;
-          sheet.getRange(foundRow, 6).setValue(newCb);
-        }
+        sheet.getRange(foundRow, L.colQty).setValue(newQty);
+        sheet.getRange(foundRow, L.colUsd).setFormula('=' + qLet + foundRow + '*GOOGLEFINANCE("' + ticker + '","price")');
+        sheet.getRange(foundRow, L.colNtd).setFormula('=' + uLet + foundRow + '*32');
+        updateAvgCostAfterTrade_(sheet, L, foundRow, category, type || 'Buy', mathQty, unitPrice);
+      } else if (category === 'NTD Stock' || category === 'NTD Preferred') {
+        sheet.getRange(foundRow, L.colQty).setValue(newQty);
+        sheet.getRange(foundRow, L.colNtd).setFormula('=' + qLet + foundRow + '*GOOGLEFINANCE("TPE:' + ticker + '","price")');
+        sheet.getRange(foundRow, L.colUsd).setFormula('=' + nLet + foundRow + '/32');
+        updateAvgCostAfterTrade_(sheet, L, foundRow, category, type || 'Buy', mathQty, unitPrice);
       } else {
-        // Cash or Loan
         if (category.startsWith('USD') || category === 'Loan') {
-          sheet.getRange(foundRow, 4).setValue(newQty);
-          sheet.getRange(foundRow, 5).setFormula(`=D${foundRow}*32`);
+          var curUsd2 = Number(sheet.getRange(foundRow, L.colUsd).getValue()) || 0;
+          sheet.getRange(foundRow, L.colUsd).setValue(curUsd2 + mathQty);
+          sheet.getRange(foundRow, L.colNtd).setFormula('=' + uLet + foundRow + '*32');
         } else {
-          sheet.getRange(foundRow, 5).setValue(newQty);
-          sheet.getRange(foundRow, 4).setFormula(`=E${foundRow}/32`);
+          var curNtd2 = Number(sheet.getRange(foundRow, L.colNtd).getValue()) || 0;
+          sheet.getRange(foundRow, L.colNtd).setValue(curNtd2 + mathQty);
+          sheet.getRange(foundRow, L.colUsd).setFormula('=' + nLet + foundRow + '/32');
         }
       }
     } else {
-      // Create new row
-      const newRow = lastRow + 1;
-      sheet.getRange(newRow, 1).setValue(category);
-      sheet.getRange(newRow, 2).setValue(ticker);
-      sheet.getRange(newRow, 3).setValue(newQty);
-      
+      const newRow = lastRow < 2 ? 2 : lastRow + 1;
+      sheet.getRange(newRow, L.colCat).setValue(category);
+      sheet.getRange(newRow, L.colTick).setValue(ticker);
+      if (L.colName) sheet.getRange(newRow, L.colName).setValue('');
+
       if (category === 'USD Stock') {
-        sheet.getRange(newRow, 4).setFormula(`=${newQty}*GOOGLEFINANCE("${ticker}","price")`);
-        sheet.getRange(newRow, 5).setFormula(`=D${newRow}*32`);
-        if (Number(price) > 0) {
-          sheet.getRange(newRow, 6).setValue(Number(price));
-        } else {
-          sheet.getRange(newRow, 6).setFormula(`=INDEX(GOOGLEFINANCE("${ticker}","price",DATE(2025,1,1)),2,2)`);
+        sheet.getRange(newRow, L.colQty).setValue(newQty);
+        sheet.getRange(newRow, L.colUsd).setFormula('=' + qLet + newRow + '*GOOGLEFINANCE("' + ticker + '","price")');
+        sheet.getRange(newRow, L.colNtd).setFormula('=' + uLet + newRow + '*32');
+        if (L.colCost) {
+          if (unitPrice > 0) sheet.getRange(newRow, L.colCost).setValue(unitPrice);
+          else sheet.getRange(newRow, L.colCost).setFormula('=INDEX(GOOGLEFINANCE("' + ticker + '","price",DATE(2025,1,1)),2,2)');
         }
-      } else if (category === 'NTD Stock') {
-        sheet.getRange(newRow, 5).setFormula(`=${newQty}*GOOGLEFINANCE("TPE:${ticker}","price")`);
-        sheet.getRange(newRow, 4).setFormula(`=E${newRow}/32`);
-        if (Number(price) > 0) {
-          sheet.getRange(newRow, 6).setValue(Number(price));
-        } else {
-          sheet.getRange(newRow, 6).setFormula(`=INDEX(GOOGLEFINANCE("TPE:${ticker}","price",DATE(2025,1,1)),2,2)`);
+      } else if (category === 'NTD Stock' || category === 'NTD Preferred') {
+        sheet.getRange(newRow, L.colQty).setValue(newQty);
+        sheet.getRange(newRow, L.colNtd).setFormula('=' + qLet + newRow + '*GOOGLEFINANCE("TPE:' + ticker + '","price")');
+        sheet.getRange(newRow, L.colUsd).setFormula('=' + nLet + newRow + '/32');
+        if (L.colCost) {
+          if (unitPrice > 0) sheet.getRange(newRow, L.colCost).setValue(unitPrice);
+          else sheet.getRange(newRow, L.colCost).setFormula('=INDEX(GOOGLEFINANCE("TPE:' + ticker + '","price",DATE(2025,1,1)),2,2)');
         }
       } else {
-        // Cash or Loan
+        sheet.getRange(newRow, L.colQty).setValue('');
         if (category.startsWith('USD') || category === 'Loan') {
-          sheet.getRange(newRow, 4).setValue(newQty);
-          sheet.getRange(newRow, 5).setFormula(`=D${newRow}*32`);
+          sheet.getRange(newRow, L.colUsd).setValue(mathQty);
+          sheet.getRange(newRow, L.colNtd).setFormula('=' + uLet + newRow + '*32');
         } else {
-          sheet.getRange(newRow, 5).setValue(newQty);
-          sheet.getRange(newRow, 4).setFormula(`=E${newRow}/32`);
+          sheet.getRange(newRow, L.colNtd).setValue(mathQty);
+          sheet.getRange(newRow, L.colUsd).setFormula('=' + nLet + newRow + '/32');
         }
       }
     }

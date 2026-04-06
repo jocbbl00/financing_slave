@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import './index.css';
 
@@ -53,6 +53,13 @@ const tickerLabel = (ticker) => {
   return name ? `${name}(${ticker})` : ticker;
 };
 
+/** Taiwan holdings: sheet DisplayName + code (e.g. TSMC · 2330), else mapped name. */
+const twDisplayLabel = (ticker, displayName) => {
+  const d = displayName && String(displayName).trim();
+  if (d) return `${d} · ${ticker}`;
+  return tickerLabel(ticker);
+};
+
 export default function App() {
   const [portfolio, setPortfolio] = useState([]);       // OVERVIEW-level 6-category summary
   const [portfolioItems, setPortfolioItems] = useState([]); // Individual stock/cash/debt rows
@@ -78,9 +85,27 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('Overview');
   const [roiTab, setRoiTab] = useState('US');
   
-  const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', type: 'Buy', price: '', isDebt: false });
+  const [formData, setFormData] = useState({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', type: 'Buy', price: '' });
   const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+  const [theme, setTheme] = useState(() =>
+    typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+  );
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      localStorage.setItem('theme', theme);
+    } catch {
+      void 0;
+    }
+  }, [theme]);
+  const chartTooltipStyle = useMemo(
+    () =>
+      theme === 'light'
+        ? { borderRadius: 12, border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.12)' }
+        : CHART_TOOLTIP_STYLE,
+    [theme]
+  );
   const { narrow: isNarrow, height: viewportH } = useViewport();
   const poppedChartHeight = isNarrow ? Math.min(400, Math.round(viewportH * 0.52)) : 500;
   const collapsedChartHeight = isNarrow ? 260 : 250;
@@ -317,7 +342,11 @@ export default function App() {
 
   const twStocksData = portfolioItems
       .filter(a => a.category === 'NTD Stock' && (Number(a.ntdValue) || 0) > 0)
-      .map(a => ({ name: tickerLabel(a.ticker), value: Number(a.ntdValue) || 0 }));
+      .map(a => ({
+        ticker: a.ticker,
+        name: twDisplayLabel(a.ticker, a.displayName),
+        value: Number(a.ntdValue) || 0,
+      }));
 
   // Cash accounts for the edit modal (loans managed via Loans sheet + Add Loan)
   const cashAccounts = portfolioItems.filter(a =>
@@ -389,9 +418,7 @@ export default function App() {
   const handleAddAsset = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    let finalAmount = Number(formData.amount);
-    if (formData.isDebt) finalAmount = -Math.abs(finalAmount);
-    
+    const qty = Number(formData.amount);
     try {
       await fetch(API_URL, {
         method: 'POST',
@@ -400,18 +427,18 @@ export default function App() {
           date: formData.date, 
           category: formData.category, 
           ticker: formData.ticker, 
-          qty: finalAmount,
+          qty,
           type: formData.type,
           price: Number(formData.price) || 0
         }),
       });
 
-      // Optimistic internal cache refetch
       setIsModalOpen(false);
-      setFormData({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', type: 'Buy', price: '', isDebt: false });
-      fetchPortfolio(); 
+      setFormData({ date: new Date().toISOString().split('T')[0], category: '', ticker: '', amount: '', type: 'Buy', price: '' });
+      fetchPortfolio();
     } catch (err) {
       console.error('Failed to update asset', err);
+    } finally {
       setIsSaving(false);
     }
   };
@@ -458,6 +485,15 @@ export default function App() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          >
+            {theme === 'dark' ? '☀ Day' : '🌙 Night'}
+          </button>
           <button className="primary-btn secondary" onClick={() => { setCashEdits({}); setIsCashModalOpen(true); }}>
             💰 Edit Cash
           </button>
@@ -468,7 +504,7 @@ export default function App() {
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Update Ledger / Debt
+            Add Stock
           </button>
         </div>
         <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', borderBottom: '2px solid rgba(51, 65, 85, 0.6)', width: '100%', overflowX: 'auto' }}>
@@ -568,7 +604,7 @@ export default function App() {
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="name" stroke="#94a3b8" />
                     <YAxis stroke="#94a3b8" />
-                    <Tooltip contentStyle={CHART_TOOLTIP_STYLE} formatter={(val) => `${CURRENCY_SYMBOLS[currency]}${val.toLocaleString()}`} />
+                    <Tooltip contentStyle={chartTooltipStyle} formatter={(val) => `${CURRENCY_SYMBOLS[currency]}${val.toLocaleString()}`} />
                     <Legend />
                     <Line type="monotone" dataKey="gross" name={`Gross Assets (${currency})`} stroke="#f59e0b" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                     <Line type="monotone" dataKey="net" name={`Net Equity (${currency})`} stroke="#10b981" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} />
@@ -611,7 +647,7 @@ export default function App() {
                   </Pie>
                   <Tooltip 
                     formatter={(value) => `${CURRENCY_SYMBOLS[currency]}${(value * FX_RATES[currency] / 32).toLocaleString(undefined, {maximumFractionDigits: 0})}`} 
-                    contentStyle={CHART_TOOLTIP_STYLE}
+                    contentStyle={chartTooltipStyle}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -855,7 +891,7 @@ export default function App() {
                           >
                             {usStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[index % PIE_COLORS.length]} />)}
                           </Pie>
-                          <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.USD}${(val).toLocaleString()}`} contentStyle={CHART_TOOLTIP_STYLE} />
+                          <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.USD}${(val).toLocaleString()}`} contentStyle={chartTooltipStyle} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -901,9 +937,9 @@ export default function App() {
                             activeIndex={-1}
                             activeShape={null}
                           >
-                            {twStocksData.map((e, index) => <Cell key={index} fill={PIE_COLORS[(index + 4) % PIE_COLORS.length]} />)}
+                            {twStocksData.map((e, index) => <Cell key={e.ticker} fill={PIE_COLORS[(index + 4) % PIE_COLORS.length]} />)}
                           </Pie>
-                          <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.NTD}${(val).toLocaleString()}`} contentStyle={CHART_TOOLTIP_STYLE} />
+                          <Tooltip formatter={(val) => `${CURRENCY_SYMBOLS.NTD}${(val).toLocaleString()}`} contentStyle={chartTooltipStyle} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
@@ -912,7 +948,7 @@ export default function App() {
                         const total = twStocksData.reduce((s, i) => s + i.value, 0);
                         const pct = total > 0 ? ((e.value / total) * 100).toFixed(1) : '0.0';
                         return (
-                          <div key={e.name} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <div key={e.ticker} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[(index + 4) % PIE_COLORS.length], flexShrink: 0 }}></span>
                             <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: isNarrow ? 'normal' : 'nowrap' }}>
                               {e.name} - NT${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)
@@ -932,7 +968,7 @@ export default function App() {
       {/* UPDATE ASSET MODAL */}
       <div className={`modal-overlay ${isModalOpen ? 'active' : ''}`} onClick={() => setIsModalOpen(false)} role="presentation">
         <div className="modal-content" onClick={e => e.stopPropagation()}>
-          <h2 style={{ marginBottom: '1.25rem' }}>Add / Update Ledger</h2>
+          <h2 style={{ marginBottom: '1.25rem' }}>Add Stock</h2>
           <form onSubmit={handleAddAsset}>
             <div className="form-group" style={{ marginBottom: '1rem' }}>
               <label>Date</label>
@@ -951,7 +987,7 @@ export default function App() {
                 type="text"
                 list="asset-categories"
                 className="form-control" 
-                placeholder="e.g. USD Stock, NTD Cash"
+                placeholder="e.g. USD Stock, NTD Stock"
                 value={formData.category}
                 onChange={e => setFormData({...formData, category: e.target.value})}
                 required
@@ -981,8 +1017,8 @@ export default function App() {
                   value={formData.type}
                   onChange={e => setFormData({...formData, type: e.target.value})}
                 >
-                  <option value="Buy">Buy / Deposit</option>
-                  <option value="Sell">Sell / Withdraw</option>
+                  <option value="Buy">Buy</option>
+                  <option value="Sell">Sell</option>
                 </select>
               </div>
               <div style={{ flex: 1 }}>
@@ -999,35 +1035,22 @@ export default function App() {
               </div>
             </div>
             
-            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-              <input 
-                type="checkbox" 
-                id="isDebt" 
-                checked={formData.isDebt}
-                onChange={e => setFormData({...formData, isDebt: e.target.checked})}
-                style={{ width: '1.1rem', height: '1.1rem', accentColor: '#ef4444' }}
-              />
-              <label htmlFor="isDebt" style={{ margin: 0, fontWeight: 500, color: formData.isDebt ? 'var(--danger)' : 'var(--text-tertiary)' }}>
-                This is a Liability / Debt (deducts from Net Equity)
-              </label>
-            </div>
-
             <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-              <label>Amount (Quantity or Monetary Value)</label>
+              <label>Quantity</label>
               <input 
                 type="number" 
                 className="form-control" 
-                placeholder="e.g. 50 (shares) or 5000 (dollars)"
+                placeholder="e.g. 50 (shares)"
                 value={formData.amount}
                 onChange={e => setFormData({...formData, amount: e.target.value})}
-                min="0" /* Negative dynamically handled by checkbox */
+                min="0"
                 required
               />
             </div>
             <div className="modal-actions">
               <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
               <button type="submit" className="primary-btn" disabled={isSaving}>
-                {isSaving ? 'Saving...' : formData.isDebt ? 'Record Debt' : 'Record Asset'}
+                {isSaving ? 'Saving...' : 'Add Stock'}
               </button>
             </div>
           </form>
