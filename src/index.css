@@ -29,6 +29,9 @@
   --modal-border: rgba(234, 179, 8, 0.15);
   --tab-bar-border: rgba(51, 65, 85, 0.6);
   --tab-btn-active-border: var(--accent-yellow);
+  --currency-tabs-bg: rgba(30, 41, 59, 0.6);
+  --currency-tabs-border: rgba(234, 179, 8, 0.22);
+  --currency-tab-inactive: var(--text-tertiary);
 }
 
 * {
@@ -136,6 +139,40 @@ header p {
   font-size: 1rem;
 }
 
+.loading-screen-title {
+  color: var(--text-primary);
+  font-size: clamp(1.35rem, 4.5vw, 1.85rem);
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.35;
+  padding: 0 1rem;
+}
+
+.currency-tabs {
+  display: flex;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--currency-tabs-border);
+  background: var(--currency-tabs-bg);
+}
+
+.currency-tabs__btn {
+  padding: 0.4rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--currency-tab-inactive);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: var(--font-family);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.currency-tabs__btn--active {
+  background: linear-gradient(135deg, #ca8a04, #eab308);
+  color: #0f172a;
+}
+
 /* Overview / Portfolio Advice / Stock Holdings — equal flex columns, no horizontal scroll on phone */
 .main-tabs {
   display: flex;
@@ -156,7 +193,7 @@ header p {
   margin-bottom: -2px;
   color: var(--text-tertiary);
   font-weight: 600;
-  font-size: clamp(0.62rem, 2.85vw, 1rem);
+  font-size: clamp(0.72rem, 3.15vw, 1rem);
   line-height: 1.2;
   text-align: center;
   white-space: normal;
@@ -633,6 +670,15 @@ html[data-theme="light"] {
   --modal-bg: #ffffff;
   --modal-border: rgba(203, 213, 225, 0.95);
   --tab-bar-border: rgba(148, 163, 184, 0.5);
+  --currency-tabs-bg: #e2e8f0;
+  --currency-tabs-border: #64748b;
+  --currency-tab-inactive: #1e293b;
+}
+
+html[data-theme="light"] .currency-tabs__btn--active {
+  background: linear-gradient(135deg, #a16207, #ca8a04);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 html[data-theme="light"] .primary-btn {

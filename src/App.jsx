@@ -75,7 +75,6 @@ export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCashModalOpen, setIsCashModalOpen] = useState(false);
   const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
-  const [loans, setLoans] = useState([]);
   const [loanForm, setLoanForm] = useState({
     loanName: '',
     portfolioTicker: '',
@@ -177,9 +176,6 @@ export default function App() {
         setHistoryData(json.history);
       }
 
-      if (json.loans) {
-        setLoans(json.loans);
-      }
     } catch (err) {
       console.error('Failed to fetch portfolio data', err);
     } finally {
@@ -374,7 +370,7 @@ export default function App() {
         value: Number(a.ntdValue) || 0,
       }));
 
-  // Cash accounts for the edit modal (loans managed via Loans sheet + Add Loan)
+  // Cash accounts for the edit modal (loans: Add Loan + sheet sync in backend)
   const cashAccounts = portfolioItems.filter(a =>
     a.category === 'USD Cash' || a.category === 'NTD Cash' ||
     a.category === 'USD Preferred'
@@ -483,7 +479,7 @@ export default function App() {
   if (isLoading) {
     return (
       <div className="app-container" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-        <h2 style={{ color: 'var(--text-primary)' }}>Your slave is working hard....</h2>
+        <h2 className="loading-screen-title">Your slave is working hard....</h2>
       </div>
     );
   }
@@ -500,21 +496,13 @@ export default function App() {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ display: 'flex', background: 'rgba(30, 41, 59, 0.6)', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
-            {['USD', 'NTD', 'JPY'].map(c => (
+          <div className="currency-tabs" role="group" aria-label="Display currency">
+            {['USD', 'NTD', 'JPY'].map((c) => (
               <button
                 key={c}
+                type="button"
+                className={`currency-tabs__btn${currency === c ? ' currency-tabs__btn--active' : ''}`}
                 onClick={() => setCurrency(c)}
-                style={{
-                  padding: '0.4rem 0.75rem',
-                  border: 'none',
-                  background: currency === c ? 'linear-gradient(135deg, #ca8a04, #eab308)' : 'transparent',
-                  color: currency === c ? '#0f172a' : 'var(--text-tertiary)',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontSize: '0.85rem',
-                  transition: 'all 0.2s'
-                }}
               >
                 {c}
               </button>
@@ -577,27 +565,6 @@ export default function App() {
           <div className="stat-value" style={{ color: '#f87171' }}>{fmt(historyData.length > 0 ? historyData[historyData.length - 1].debt : totalUsdDebt)}</div>
         </div>
 
-        {loans.length > 0 && (
-        <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
-          <h2 style={{ fontWeight: 600, marginBottom: '0.75rem', fontSize: '1.1rem' }}>Loans (sheet-driven)</h2>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)', marginBottom: '1rem' }}>Remaining principal is recalculated on each refresh from the Loans sheet (fixed-rate amortization).</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {loans.map((L) => (
-              <div key={L.portfolioTicker} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '0.5rem', padding: '0.75rem 0', borderBottom: '1px solid rgba(51, 65, 85, 0.5)' }}>
-                <div>
-                  <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{L.loanName}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>Ticker: {L.portfolioTicker} · {L.paymentsApplied} / {L.termMonths} mo · {L.annualRatePct}% APR</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontWeight: 700, color: 'var(--danger)' }}>NT${Math.round(L.remainingNtd).toLocaleString()} left</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>NT${L.monthlyPaymentNtd.toLocaleString()}/mo</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        )}
-        
         <div className={`glass-card insight-card ${poppedCard === 'history' ? 'popped-out' : ''}`} style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
           <div onClick={() => setPoppedCard(p => p === 'history' ? null : 'history')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', cursor: 'pointer' }}>
             <h2 style={{ fontWeight: 600, margin: 0 }}>Equity History ({currency})</h2>
