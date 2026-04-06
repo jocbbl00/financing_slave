@@ -245,108 +245,74 @@ export default function App() {
   }
 
 
-  // AI-driven investment suggestions based on portfolio composition & market analysis
+  // AI-driven investment suggestions (static templates; personalized with your holdings)
   const generateInvestmentSuggestions = () => {
-    const todayNum = Math.floor(Date.now() / 86400000);
-    const todayIndex = todayNum % 3;
-    
-    // Analyze user's actual holdings
     const usHoldings = portfolioItems.filter(a => a.category === 'USD Stock');
 
-    // Generate stock-specific suggestions based on portfolio and market thesis
-    const allBuySuggestions = [
-      [
-        { ticker: 'NVDA', action: 'BUY', reason: 'AI infrastructure demand continues to accelerate. Your position ($' + Math.round(usHoldings.find(h => h.ticker === 'NVDA')?.usdValue || 0).toLocaleString() + ') is strong but NVDA remains the foundational AI compute play with expanding margins. Consider adding on any dips below $120.' },
-        { ticker: 'GOOGL', action: 'BUY', reason: 'Alphabet is undervalued relative to its AI capabilities (Gemini) and cloud growth. Your ' + (usHoldings.find(h => h.ticker === 'GOOGL')?.qty || 0) + ' shares give you exposure but the P/E ratio suggests room for accumulation.' },
-        { ticker: 'TSMC (2330)', action: 'HOLD', reason: 'Your largest TW position. TSMC dominates advanced chip manufacturing with 90%+ market share in sub-7nm. Geopolitical risk is the main concern — hold but do not add aggressively.' },
-      ],
-      [
-        { ticker: 'AMD', action: 'BUY', reason: 'AMD\'s MI300X AI accelerators are gaining enterprise traction as an NVIDIA alternative. Your ' + (usHoldings.find(h => h.ticker === 'AMD')?.qty || 0) + ' shares position you well — consider adding 10-20 more shares on weakness below $100.' },
-        { ticker: 'META', action: 'BUY', reason: 'Meta\'s AI monetization through advertising is producing record margins. Only ' + (usHoldings.find(h => h.ticker === 'META')?.qty || 0) + ' shares — this is underweight for a top AI beneficiary. Target 25+ shares.' },
-        { ticker: 'PLTR', action: 'HOLD', reason: 'Palantir\'s government + commercial AI platform is sticky but valuation is stretched. Your 40 shares are adequate — wait for a pullback before adding.' },
-      ],
-      [
-        { ticker: 'MSFT', action: 'BUY', reason: 'Azure AI + Copilot monetization is underappreciated. Your ' + (usHoldings.find(h => h.ticker === 'MSFT')?.qty || 0) + ' shares is light — consider building to 30+ shares. Enterprise AI spending directly benefits Microsoft.' },
-        { ticker: 'VRT', action: 'BUY', reason: 'Vertiv powers the cooling and power infrastructure for AI data centers. Strong secular tailwind. Your 32 shares have room to grow — consider adding on any sub-$80 pullback.' },
-        { ticker: 'LEU', action: 'HOLD', reason: 'Centrus Energy benefits from the nuclear renaissance for AI data center power. Speculative but high upside. Your 10 shares are a good speculative position — hold.' },
-      ]
+    const buys = [
+      { ticker: 'NVDA', action: 'BUY', reason: 'AI infrastructure demand continues to accelerate. Your position ($' + Math.round(usHoldings.find(h => h.ticker === 'NVDA')?.usdValue || 0).toLocaleString() + ') is strong but NVDA remains the foundational AI compute play with expanding margins. Consider adding on any dips below $120.' },
+      { ticker: 'GOOGL', action: 'BUY', reason: 'Alphabet is undervalued relative to its AI capabilities (Gemini) and cloud growth. Your ' + (usHoldings.find(h => h.ticker === 'GOOGL')?.qty || 0) + ' shares give you exposure but the P/E ratio suggests room for accumulation.' },
+      { ticker: 'TSMC (2330)', action: 'HOLD', reason: 'Your largest TW position. TSMC dominates advanced chip manufacturing with 90%+ market share in sub-7nm. Geopolitical risk is the main concern — hold but do not add aggressively.' },
     ];
 
-    const allSellSuggestions = [
-      [
-        { ticker: 'PLUG', action: 'TRIM', reason: 'Plug Power continues burning cash with no clear path to profitability. Your 120 shares at ~$' + Math.round(usHoldings.find(h => h.ticker === 'PLUG')?.usdValue || 0).toLocaleString() + ' is a high-risk bet. Consider trimming to 50 shares and reallocating to profitable companies.' },
-        { ticker: 'EVGO', action: 'TRIM', reason: 'EV charging is a tough business with slow returns. Your 50 shares carry high risk. Consider cutting to 20 and rotating into energy infrastructure (VRT, NEE).' },
-      ],
-      [
-        { ticker: 'ABAT', action: 'SELL', reason: 'American Battery Technology is a micro-cap with minimal revenue. Your 54 shares are worth only ~$' + Math.round(usHoldings.find(h => h.ticker === 'ABAT')?.usdValue || 0).toLocaleString() + '. Consider exiting entirely and reallocating to proven names.' },
-        { ticker: 'LAC', action: 'TRIM', reason: 'Lithium Americas is pre-revenue and lithium prices remain depressed. Consider trimming from 20 to 10 shares.' },
-      ],
-      [
-        { ticker: 'PLUG', action: 'SELL', reason: 'Hydrogen fuel cells haven\'t reached commercial viability. 120 shares is an outsized speculative bet. Trim aggressively to 30 shares maximum.' },
-        { ticker: 'LAAC', action: 'TRIM', reason: 'Lithium Argentina faces commodity price headwinds and operational risk. Your 20 shares are speculative — consider cutting to 10.' },
-      ]
+    const sells = [
+      { ticker: 'PLUG', action: 'TRIM', reason: 'Plug Power continues burning cash with no clear path to profitability. Your 120 shares at ~$' + Math.round(usHoldings.find(h => h.ticker === 'PLUG')?.usdValue || 0).toLocaleString() + ' is a high-risk bet. Consider trimming to 50 shares and reallocating to profitable companies.' },
+      { ticker: 'EVGO', action: 'TRIM', reason: 'EV charging is a tough business with slow returns. Your 50 shares carry high risk. Consider cutting to 20 and rotating into energy infrastructure (VRT, NEE).' },
     ];
 
-    return {
-      buys: allBuySuggestions[todayIndex],
-      sells: allSellSuggestions[todayIndex],
-    };
+    return { buys, sells };
   };
   const suggestions = generateInvestmentSuggestions();
 
   const analyzePortfolio = () => {
-    const todayNum = Math.floor(Date.now() / 86400000);
-    const todayIndex = todayNum % 3;
     const sections = [];
 
-    const allIndustries = [
-      [
-        '🧠 AI Edge Hardware — The physical optical interconnect layer powering hyperscale LLM clusters remains deeply undervalued. Watch: Coherent (COHR).',
-        '⚡ Grid-Scale Energy Storage — Battery storage deployment is accelerating 40% YoY globally. Watch: Fluence Energy (FLNC).',
-        '🏭 Semiconductor Equipment — Next-gen lithography tooling demand is recovering. Watch: ASML, Applied Materials.'
-      ],
-      [
-        '🧬 Biotech/GLP-1 Weight Loss — Sustained momentum in anti-obesity drugs is driving broader pharma revenues. Watch: Eli Lilly (LLY).',
-        '🛡️ Cybersecurity — Increasing LLM-driven attacks boost corporate spending on zero-trust architectures. Watch: CrowdStrike (CRWD).',
-        '🛰️ Aerospace & Defense — Global re-armament cycles are filling up defense contractor backlogs for years. Watch: RTX.'
-      ],
-      [
-        '☢️ Nuclear & Uranium — Tech giants are directly contracting nuclear power for AI data centers. Watch: Constellation Energy (CEG).',
-        '🤖 Industrial Robotics — Reshoring of supply chains involves heavy capital expenditure into automation. Watch: Fanuc.',
-        '🏗️ US Infrastructure — Federal spending is finally hitting the earnings of heavy machinery and materials companies. Watch: Caterpillar (CAT).'
-      ]
-    ];
-    
-    const allNews = [
-      [
-        { text: 'Fed Interest Rate Monitor', url: 'https://finance.yahoo.com/calendar/economic/', summary: 'Track CPI and rate decisions tightly. Rate cuts improve equity valuations.' },
-        { text: 'TSMC Latest Updates', url: 'https://finance.yahoo.com/quote/TSM', summary: 'Check TSMC for global semiconductor health and AI chip demand.' },
-        { text: 'Bloomberg Global Markets', url: 'https://finance.yahoo.com/world-indices/', summary: 'Essential for cross-checking your portfolio risk against macro sentiment.' }
-      ],
-      [
-        { text: 'US Treasury Yield Curve', url: 'https://www.cnbc.com/us-treasurys/', summary: 'Inversions or steepening indicate potential recession or inflationary growth phases.' },
-        { text: 'Nikkei & BOJ Policy Updates', url: 'https://finance.yahoo.com/quote/%5EN225/', summary: 'Changes in BOJ yield curve control affect Japanese equities and the JPY directly.' },
-        { text: 'WSJ Technology News', url: 'https://www.wsj.com/news/technology', summary: 'Daily tech earnings and market shifts essential for US Tech stock exposures.' }
-      ],
-      [
-        { text: 'Taiwan Taiex Index', url: 'https://finance.yahoo.com/quote/%5ETWII/', summary: 'Monitor broader Taiwan market conditions governing your NTD stock positions.' },
-        { text: 'CME FedWatch Tool', url: 'https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html', summary: 'Live market probabilities of upcoming Fed interest rate moves.' },
-        { text: 'CNBC Market Movers', url: 'https://www.cnbc.com/market-movers/', summary: 'See the most active stocks today to spot sector rotations in real time.' }
-      ]
+    const industryItems = [
+      '🧠 AI & data centers — Optical interconnect and power/cooling for hyperscale clusters remain key. Watch: COHR, VRT.',
+      '⚡ Rates & liquidity — Fed path and real yields drive US equity multiples; check yields when sizing risk.',
+      '🏭 Semis & Taiwan — Equipment demand (ASML, AMAT) and TAIEX breadth matter for your US + TW book.',
     ];
 
-    sections.push({ 
-      title: "Industries to Monitor", 
-      icon: "🔭",
-      color: '#10b981', 
-      items: allIndustries[todayIndex]
+    const marketNewsLinks = [
+      {
+        text: 'S&P 500 (US broad market)',
+        url: 'https://finance.yahoo.com/quote/%5EGSPC/',
+        summary: 'Large-cap US benchmark index — use level, trend, and volatility as context for USD stocks.',
+      },
+      {
+        text: 'TAIEX (Taiwan broad market)',
+        url: 'https://finance.yahoo.com/quote/%5ETWII/',
+        summary: 'Taiwan Weighted Index — overall local market tone vs your NTD / Taiwan listings.',
+      },
+      {
+        text: 'Reuters · US markets',
+        url: 'https://www.reuters.com/markets/us/',
+        summary: 'Headlines on US indices, earnings, and policy moving risk assets.',
+      },
+      {
+        text: 'CNBC · Markets',
+        url: 'https://www.cnbc.com/markets/',
+        summary: 'Breaking moves in stocks, bonds, and futures with intraday context.',
+      },
+      {
+        text: 'Financial Times · Markets',
+        url: 'https://www.ft.com/markets',
+        summary: 'Global markets coverage: rates, FX, and cross-border flows.',
+      },
+    ];
+
+    sections.push({
+      title: 'Industries to Monitor',
+      icon: '🔭',
+      color: '#10b981',
+      items: industryItems,
     });
 
-    sections.push({ 
-      title: "News to Keep an Eye On", 
-      icon: "📰",
-      color: '#3b82f6', 
-      links: allNews[todayIndex]
+    sections.push({
+      title: 'News to Keep an Eye On',
+      icon: '📰',
+      color: '#3b82f6',
+      links: marketNewsLinks,
     });
 
     return sections;
@@ -786,7 +752,7 @@ export default function App() {
           <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
             <h2 style={{ fontWeight: 600, marginBottom: '1rem' }}>💡 Investment Suggestions</h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.55 }}>
-              Templates personalize with your holdings. The app picks <strong style={{ color: 'var(--accent-yellow)' }}>one of three variants</strong> based on the <strong style={{ color: 'var(--accent-yellow)' }}>UTC calendar day</strong> (changes at midnight UTC, not a live AI feed). Reload the page anytime to reflect the current day.
+              Templates personalize with your holdings from the sheet. This is not a live AI feed — refresh after updating the spreadsheet to see numbers and names change.
             </p>
             <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
               <div style={{ flex: '1', background: 'rgba(16, 185, 129, 0.12)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(52, 211, 153, 0.25)', borderLeft: '4px solid #34d399', minWidth: '280px' }}>
@@ -817,16 +783,17 @@ export default function App() {
           </div>
 
           <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h2 style={{ fontWeight: 600 }}>🤖 AI Portfolio & Market Advisor</h2>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', background: 'rgba(30, 41, 59, 0.9)', border: '1px solid rgba(234, 179, 8, 0.2)', padding: '0.25rem 0.5rem', borderRadius: '12px' }}>Variant tied to UTC day</span>
+            <div className="advice-main-head">
+              <h3 className="advice-card-title">
+                {isNarrow ? 'AI portfolio & market advisor' : '🤖 AI portfolio & market advisor'}
+              </h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
               {advice.map((section, idx) => (
                  <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.65)', padding: '1.25rem 1.5rem', borderRadius: '16px', border: '1px solid rgba(148, 163, 184, 0.2)', borderLeft: `6px solid ${section.color}` }}>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                     <span style={{ fontSize: '1.3rem' }}>{section.icon}</span>
-                     <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text-primary)', fontWeight: '700' }}>{section.title}</h3>
+                   <div className="advice-section-head">
+                     <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{section.icon}</span>
+                     <h3 className="advice-card-title" style={{ margin: 0 }}>{section.title}</h3>
                    </div>
                    {section.items && section.items.map((item, i) => (
                      <p key={i} style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', fontWeight: 500, lineHeight: '1.7', margin: '0 0 0.5rem 0', paddingLeft: '0.5rem', borderLeft: '2px solid rgba(148, 163, 184, 0.35)' }}>{item}</p>

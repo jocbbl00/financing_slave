@@ -182,6 +182,46 @@ header p {
   width: 100%;
 }
 
+/* Portfolio Advice: section titles share one scale; main advisor title stays one line on narrow screens */
+.advice-card-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.advice-main-head {
+  margin-bottom: 1rem;
+  width: 100%;
+  min-width: 0;
+}
+
+.advice-section-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  min-width: 0;
+}
+
+.advice-section-head .advice-card-title {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  .advice-card-title {
+    font-size: 1.05rem;
+  }
+
+  .advice-main-head .advice-card-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 /* Overview / Portfolio Advice / Stock Holdings — equal flex columns, no horizontal scroll on phone */
 .main-tabs {
   display: flex;
