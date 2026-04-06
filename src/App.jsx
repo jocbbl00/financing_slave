@@ -993,7 +993,7 @@ export default function App() {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="pie-legend pie-legend--one-row">
+                    <div className="pie-legend pie-legend--one-column">
                       {twStocksData.map((e, index) => {
                         const total = twStocksData.reduce((s, i) => s + i.value, 0);
                         const pct = total > 0 ? ((e.value / total) * 100).toFixed(1) : '0.0';

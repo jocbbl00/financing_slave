@@ -830,18 +830,12 @@ html[data-theme="light"] .holdings-section {
   gap: 0.35rem 1.25rem;
 }
 
-.pie-legend--one-row {
-  flex-wrap: nowrap;
-  justify-content: flex-start;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 0.15rem;
-}
-
-@media (max-width: 1200px) {
-  .pie-legend--two-rows {
-    grid-template-columns: minmax(280px, 1fr);
-  }
+.pie-legend--one-column {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr);
+  justify-items: start;
+  justify-content: center;
+  gap: 0.35rem;
 }
 
 .recharts-responsive-container {
