@@ -477,7 +477,7 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="app-container" style={{ alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+      <div className="loading-screen-root">
         <h2 className="loading-screen-title">Your slave is working hard....</h2>
       </div>
     );
