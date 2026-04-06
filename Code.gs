@@ -4,6 +4,9 @@
 var FX_SHEET_NAME_ = 'FX';
 var FX_TWD_PER_USD_REF_ = 'FX!$B$1';
 
+/** Workbook the web app reads/writes — must match your real file. */
+var SPREADSHEET_ID_ = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
+
 function ensureFxSheet_(spreadsheet) {
   var sh = spreadsheet.getSheetByName(FX_SHEET_NAME_);
   if (!sh) sh = spreadsheet.insertSheet(FX_SHEET_NAME_);
@@ -260,8 +263,7 @@ function updateAvgCostAfterTrade_(sheet, L, rowIdx, category, type, mathQty, uni
 }
 
 function doGet(e) {
-  const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
-  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID_);
   const fxRates = readFxRates_(spreadsheet);
   syncLoansToPortfolio_(spreadsheet);
   const loansSheet = spreadsheet.getSheetByName('Loans');
@@ -412,8 +414,7 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({ error: "Invalid JSON payload" })).setMimeType(ContentService.MimeType.JSON);
   }
   
-  const spreadsheetId = '1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U';
-  const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID_);
   ensureFxSheet_(spreadsheet);
 
   // ===== INIT PORTFOLIO: One-time bulk load with GOOGLEFINANCE formulas =====
@@ -694,4 +695,33 @@ function doOptions(e) {
     "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept"
   };
   return ContentService.createTextOutput("").setHeaders(headers);
+}
+
+/**
+ * If you never see an FX tab: open this script in Apps Script, choose
+ * "createOrRepairFxSheet" in the function dropdown, click Run (▶), authorize.
+ * That creates sheet "FX" with live rates in B1 (TWD/USD) and B2 (JPY/USD).
+ */
+function createOrRepairFxSheet() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID_);
+  ensureFxSheet_(ss);
+  SpreadsheetApp.flush();
+  Logger.log('Done. Open the spreadsheet and check the "' + FX_SHEET_NAME_ + '" tab.');
+}
+
+/**
+ * Only runs when this project is bound to a spreadsheet (File opened from
+ * Extensions → Apps Script on that sheet). Adds a menu to create FX without the editor.
+ */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Portfolio tools')
+    .addItem('Create / refresh FX sheet', 'menuFxSheet')
+    .addToUi();
+}
+
+function menuFxSheet() {
+  ensureFxSheet_(SpreadsheetApp.getActiveSpreadsheet());
+  SpreadsheetApp.flush();
+  SpreadsheetApp.getUi().alert('FX tab is ready. Rates: B1 = TWD per USD, B2 = JPY per USD.');
 }
