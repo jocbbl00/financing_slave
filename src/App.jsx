@@ -291,10 +291,24 @@ export default function App() {
     fill: a.amount < 0 ? '#ef4444' : undefined // Custom fill hook for later versions, defaulting via pie mapping below
   }));
 
-  // Build Historical Chart Data from History sheet snapshots
-  const historicalChartData = historyData.map(h => {
+  // Sheet may have daily snapshots; chart shows one point per calendar month (latest snapshot in that month).
+  const historyLatestPerMonth = (() => {
+    const byMonth = new Map();
+    for (const h of historyData) {
+      const d = new Date(h.date);
+      if (Number.isNaN(d.getTime())) continue;
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const prev = byMonth.get(key);
+      if (!prev || d > new Date(prev.date)) byMonth.set(key, h);
+    }
+    return Array.from(byMonth.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([, row]) => row);
+  })();
+
+  const historicalChartData = historyLatestPerMonth.map((h) => {
     const d = new Date(h.date);
-    const label = `${d.getFullYear()}-${(d.getMonth()+1).toString().padStart(2, '0')}`;
+    const label = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     return {
       name: label,
       gross: Math.round((h.gross || 0) * displayMult[currency]),
