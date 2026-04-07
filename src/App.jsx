@@ -640,9 +640,17 @@ export default function App() {
           {displayChartData.length > 0 ? (
              <div className="chart-wrap" style={{ width: '100%', height: poppedCard === 'history' ? (isNarrow ? Math.min(380, Math.round(viewportH * 0.55)) : Math.round(viewportH * 0.65)) : 280 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={displayChartData}>
+                  <LineChart data={displayChartData} margin={{ top: 8, right: 8, left: 4, bottom: 28 }}>
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="name" stroke="#94a3b8" />
+                    <XAxis
+                      dataKey="name"
+                      stroke="#94a3b8"
+                      interval={0}
+                      angle={-32}
+                      textAnchor="end"
+                      height={48}
+                      tick={{ fontSize: 10, fill: '#94a3b8' }}
+                    />
                     <YAxis stroke="#94a3b8" />
                     <Tooltip contentStyle={chartTooltipStyle} formatter={(val) => `${CURRENCY_SYMBOLS[currency]}${val.toLocaleString()}`} />
                     <Legend />
