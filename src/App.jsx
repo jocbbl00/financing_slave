@@ -682,7 +682,7 @@ export default function App() {
                     data={pieData} 
                     dataKey="value" 
                     nameKey="name" 
-                    cx="50%" 
+                    cx="48%" 
                     cy="50%" 
                     innerRadius={pieRadii(poppedCard === 'distribution').inner}
                     outerRadius={pieRadii(poppedCard === 'distribution').outer}
@@ -840,7 +840,7 @@ export default function App() {
 
       {activeTab === 'Portfolio Advice' && (
         <div className="dashboard-grid">
-          <div className="glass-card" style={{ gridColumn: '1 / -1' }}>
+          <div className="glass-card portfolio-advice-card" style={{ gridColumn: '1 / -1' }}>
             <div className="advice-main-head">
               <h3 className="advice-card-title">💡 Investment Suggestions</h3>
             </div>
@@ -881,7 +881,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="glass-card insight-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
+          <div className="glass-card insight-card portfolio-advice-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
             <div className="advice-main-head">
               <h3 className="advice-card-title">
                 🤖 AI portfolio & market advisor
@@ -889,7 +889,7 @@ export default function App() {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
               {advice.map((section, idx) => (
-                 <div key={idx} style={{ background: 'rgba(15, 23, 42, 0.65)', padding: '1.25rem 1.5rem', borderRadius: '16px', border: '1px solid rgba(148, 163, 184, 0.2)', borderLeft: `6px solid ${section.color}` }}>
+                 <div key={idx} className="advisor-section-card" style={{ borderLeft: `6px solid ${section.color}` }}>
                    <div className="advice-section-head">
                      <span style={{ fontSize: '1.3rem', flexShrink: 0 }}>{section.icon}</span>
                      <h3 className="advice-card-title" style={{ margin: 0 }}>{section.title}</h3>

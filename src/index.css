@@ -468,6 +468,27 @@ html[data-theme="light"] .advice-market-link:hover {
   text-decoration: underline;
 }
 
+.advisor-section-card {
+  background: rgba(15, 23, 42, 0.65);
+  padding: 1.25rem 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+html[data-theme="light"] .advisor-section-card {
+  background: rgba(255, 255, 255, 0.74);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  html[data-theme="light"] .portfolio-advice-card:hover {
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+    transform: none;
+    box-shadow: var(--card-shadow);
+  }
+}
+
 /* Overview / Portfolio Advice / Stock Holdings — equal flex columns, no horizontal scroll on phone */
 .main-tabs {
   display: flex;
