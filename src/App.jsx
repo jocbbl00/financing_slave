@@ -150,6 +150,7 @@ export default function App() {
   });
   const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [fxRates, setFxRates] = useState(DEFAULT_FX);
   const [theme, setTheme] = useState(() =>
     typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
@@ -191,7 +192,7 @@ export default function App() {
   const isTwStockCat = addFormCategory === 'NTD Stock' || addFormCategory === 'NTD Preferred';
 
   useEffect(() => {
-    fetchPortfolio();
+    fetchPortfolio({ showLoader: true });
   }, []);
 
   useEffect(() => {
@@ -203,9 +204,10 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [poppedCard]);
 
-  const fetchPortfolio = async () => {
+  const fetchPortfolio = async ({ showLoader = false } = {}) => {
     try {
-      setIsLoading(true);
+      if (showLoader) setIsLoading(true);
+      else setIsRefreshing(true);
       const res = await fetch(API_URL);
       const json = await res.json();
       
@@ -241,7 +243,8 @@ export default function App() {
     } catch (err) {
       console.error('Failed to fetch portfolio data', err);
     } finally {
-      setIsLoading(false);
+      if (showLoader) setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -590,6 +593,18 @@ export default function App() {
             </button>
           ))}
         </div>
+        {(activeTab === 'Overview' || activeTab === 'Portfolio Advice') && (
+          <div className="tab-refresh-row">
+            <button
+              type="button"
+              className="primary-btn secondary"
+              onClick={() => fetchPortfolio()}
+              disabled={isRefreshing || isSaving}
+            >
+              {isRefreshing ? '⟳ Refreshing...' : '⟳ Refresh'}
+            </button>
+          </div>
+        )}
       </header>
 
       {activeTab === 'Overview' && (
