@@ -236,6 +236,8 @@ export default function App() {
   const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [newsTick, setNewsTick] = useState(() => Date.now());
+  const [liveNews, setLiveNews] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(true);
   const [fxRates, setFxRates] = useState(DEFAULT_FX);
   const [theme, setTheme] = useState(() =>
     typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
@@ -283,6 +285,41 @@ export default function App() {
   useEffect(() => {
     const id = setInterval(() => setNewsTick(Date.now()), 60000);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const FEEDS = [
+      { url: 'https://finance.yahoo.com/news/rssindex', source: 'Yahoo Finance' },
+      { url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', source: 'CNBC' },
+      { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters' },
+    ];
+    const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    const cutoff = Date.now() - ONE_WEEK_MS;
+
+    const fetchFeed = async ({ url, source }) => {
+      const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=5`;
+      const res = await fetch(api);
+      const data = await res.json();
+      if (data.status !== 'ok') return null;
+      const recent = (data.items || []).find(
+        (item) => new Date(item.pubDate).getTime() > cutoff
+      );
+      if (!recent) return null;
+      return {
+        text: `${source} · ${recent.title}`,
+        url: recent.link,
+        summary: (recent.description || '').replace(/<[^>]+>/g, '').slice(0, 160).trim() || recent.title,
+        pubDate: recent.pubDate,
+      };
+    };
+
+    Promise.allSettled(FEEDS.map(fetchFeed)).then((results) => {
+      const articles = results
+        .filter((r) => r.status === 'fulfilled' && r.value)
+        .map((r) => r.value);
+      setLiveNews(articles);
+      setNewsLoading(false);
+    });
   }, []);
 
   useEffect(() => {
@@ -448,6 +485,7 @@ export default function App() {
       '🏭 Semis & Taiwan — Equipment demand (ASML, AMAT) and TAIEX breadth matter for your US + TW book.',
     ];
 
+    const newsItems = liveNews.length > 0 ? liveNews : rotatingNews;
     const marketNewsLinks = [
       {
         text: 'S&P 500 (US broad market)',
@@ -459,7 +497,7 @@ export default function App() {
         url: 'https://finance.yahoo.com/quote/%5ETWII/',
         summary: 'Taiwan Weighted Index — overall local market tone vs your NTD / Taiwan listings.',
       },
-      ...rotatingNews,
+      ...newsItems,
     ];
 
     sections.push({
@@ -470,7 +508,7 @@ export default function App() {
     });
 
     sections.push({
-      title: 'News to Keep an Eye On',
+      title: newsLoading ? 'News to Keep an Eye On (loading…)' : liveNews.length > 0 ? 'News to Keep an Eye On (past 7 days)' : 'News to Keep an Eye On',
       icon: '📰',
       color: '#3b82f6',
       links: marketNewsLinks,
