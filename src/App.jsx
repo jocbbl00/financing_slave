@@ -115,6 +115,91 @@ const usDisplayLabel = (ticker, displayName) => {
   return tickerLabel(ticker);
 };
 
+const DAILY_NEWS_POOL = {
+  WIRED: [
+    {
+      text: 'WIRED · The AI Data Center Boom Is Warping the US Economy',
+      url: 'https://www.wired.com/story/data-center-ai-boom-us-economy-jobs/',
+      summary: 'Tracks how hyperscaler capex and power demand are changing jobs, local grids, and AI infrastructure economics.',
+    },
+    {
+      text: 'WIRED · Arm Is Now Making Its Own Chips',
+      url: 'https://www.wired.com/story/chip-design-firm-arm-is-making-its-own-ai-cpu',
+      summary: 'Covers competitive shifts in AI compute and chip supply that can affect semiconductor valuation assumptions.',
+    },
+    {
+      text: 'WIRED · OpenAI’s AMD Deal Is a Bet on AI Demand',
+      url: 'https://www.wired.com/story/openai-amd-deal-data-center-chips/',
+      summary: 'Highlights demand outlook for data-center GPUs and infrastructure, relevant to broader AI hardware momentum.',
+    },
+  ],
+  WSJ: [
+    {
+      text: 'WSJ · Treasury Yields, Dollar Rise on Fed’s Hawkish Tone',
+      url: 'https://on.wsj.com/48UduHJ',
+      summary: 'Useful read for rate-path risk: bond yields and USD moves directly affect valuation multiples and global risk appetite.',
+    },
+    {
+      text: 'WSJ · Markets Coverage',
+      url: 'https://www.wsj.com/news/markets',
+      summary: 'Daily market pulse for macro drivers (rates, dollar, equities) that feed through to portfolio risk-on/risk-off behavior.',
+    },
+    {
+      text: 'WSJ · Economy Coverage',
+      url: 'https://www.wsj.com/economy',
+      summary: 'Macro and policy updates to track labor, inflation, and growth signals that influence portfolio positioning.',
+    },
+  ],
+  ECONOMIST: [
+    {
+      text: 'The Economist · The Semiconductor Choke-point',
+      url: 'https://www.economist.com/asia/2024/06/13/the-semiconductor-choke-point',
+      summary: 'Explains Taiwan concentration risk and supply-chain geopolitics that can swing both your US chip names and TSMC exposure.',
+    },
+    {
+      text: 'The Economist · TSMC Walks a Geopolitical Tightrope',
+      url: 'https://www.economist.com/business/2024/11/14/tsmc-walks-a-geopolitical-tightrope',
+      summary: 'Focuses on balancing US/China pressures and implications for semiconductor capex and supply resilience.',
+    },
+    {
+      text: 'The Economist · Soldiers of the Silicon Supply Chain Are Worried',
+      url: 'https://www.economist.com/business/2024/05/30/the-soldiers-of-the-silicon-supply-chain-are-worried',
+      summary: 'Details supply-chain fragility and geopolitical scenarios that can reprice semiconductor and Taiwan risk quickly.',
+    },
+  ],
+};
+
+function getEtRotationDayNumber(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now);
+  const pick = (type) => Number(parts.find((p) => p.type === type)?.value || 0);
+  const y = pick('year');
+  const m = pick('month');
+  const d = pick('day');
+  const h = pick('hour');
+  const min = pick('minute');
+  let dayNum = Math.floor(Date.UTC(y, m - 1, d) / 86400000);
+  // Rotate to next daily set at 11:59 PM ET.
+  if (h === 23 && min >= 59) dayNum += 1;
+  return dayNum;
+}
+
+function selectDailyNews(dayNumber) {
+  const pickFrom = (arr, offset) => arr[((dayNumber + offset) % arr.length + arr.length) % arr.length];
+  return [
+    pickFrom(DAILY_NEWS_POOL.WIRED, 0),
+    pickFrom(DAILY_NEWS_POOL.WSJ, 1),
+    pickFrom(DAILY_NEWS_POOL.ECONOMIST, 2),
+  ];
+}
+
 export default function App() {
   const [portfolio, setPortfolio] = useState([]);       // OVERVIEW-level 6-category summary
   const [portfolioItems, setPortfolioItems] = useState([]); // Individual stock/cash/debt rows
@@ -150,7 +235,7 @@ export default function App() {
   });
   const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [newsTick, setNewsTick] = useState(() => Date.now());
   const [fxRates, setFxRates] = useState(DEFAULT_FX);
   const [theme, setTheme] = useState(() =>
     typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
@@ -192,7 +277,12 @@ export default function App() {
   const isTwStockCat = addFormCategory === 'NTD Stock' || addFormCategory === 'NTD Preferred';
 
   useEffect(() => {
-    fetchPortfolio({ showLoader: true });
+    fetchPortfolio();
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setNewsTick(Date.now()), 60000);
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
@@ -204,10 +294,9 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [poppedCard]);
 
-  const fetchPortfolio = async ({ showLoader = false } = {}) => {
+  const fetchPortfolio = async () => {
     try {
-      if (showLoader) setIsLoading(true);
-      else setIsRefreshing(true);
+      setIsLoading(true);
       const res = await fetch(API_URL);
       const json = await res.json();
       
@@ -243,8 +332,7 @@ export default function App() {
     } catch (err) {
       console.error('Failed to fetch portfolio data', err);
     } finally {
-      if (showLoader) setIsLoading(false);
-      setIsRefreshing(false);
+      setIsLoading(false);
     }
   };
 
@@ -346,6 +434,10 @@ export default function App() {
     return { buys, sells };
   };
   const suggestions = generateInvestmentSuggestions();
+  const rotatingNews = useMemo(
+    () => selectDailyNews(getEtRotationDayNumber(new Date(newsTick))),
+    [newsTick]
+  );
 
   const analyzePortfolio = () => {
     const sections = [];
@@ -367,21 +459,7 @@ export default function App() {
         url: 'https://finance.yahoo.com/quote/%5ETWII/',
         summary: 'Taiwan Weighted Index — overall local market tone vs your NTD / Taiwan listings.',
       },
-      {
-        text: 'WIRED · The AI Data Center Boom Is Warping the US Economy',
-        url: 'https://www.wired.com/story/data-center-ai-boom-us-economy-jobs/',
-        summary: 'Tracks how hyperscaler capex and power demand are changing jobs, local grids, and AI infrastructure economics.',
-      },
-      {
-        text: 'WSJ · Treasury Yields, Dollar Rise on Fed’s Hawkish Tone',
-        url: 'https://on.wsj.com/48UduHJ',
-        summary: 'Useful read for rate-path risk: bond yields and USD moves directly affect valuation multiples and global risk appetite.',
-      },
-      {
-        text: 'The Economist · The Semiconductor Choke-point',
-        url: 'https://www.economist.com/asia/2024/06/13/the-semiconductor-choke-point',
-        summary: 'Explains Taiwan concentration risk and supply-chain geopolitics that can swing both your US chip names and TSMC exposure.',
-      },
+      ...rotatingNews,
     ];
 
     sections.push({
@@ -593,18 +671,6 @@ export default function App() {
             </button>
           ))}
         </div>
-        {(activeTab === 'Overview' || activeTab === 'Portfolio Advice') && (
-          <div className="tab-refresh-row">
-            <button
-              type="button"
-              className="primary-btn secondary"
-              onClick={() => fetchPortfolio()}
-              disabled={isRefreshing || isSaving}
-            >
-              {isRefreshing ? '⟳ Refreshing...' : '⟳ Refresh'}
-            </button>
-          </div>
-        )}
       </header>
 
       {activeTab === 'Overview' && (

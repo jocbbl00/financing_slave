@@ -519,13 +519,6 @@ html[data-theme="light"] .advisor-section-card {
   transition: color 0.15s ease, border-bottom-color 0.15s ease;
 }
 
-.tab-refresh-row {
-  display: flex;
-  justify-content: flex-end;
-  width: 100%;
-  margin-top: 0.75rem;
-}
-
 .main-tabs__btn--active {
   border-bottom-color: var(--tab-btn-active-border);
   color: var(--text-primary);
