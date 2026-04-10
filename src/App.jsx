@@ -716,15 +716,6 @@ export default function App() {
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-          >
-            {theme === 'dark' ? '☀ Day' : '🌙 Night'}
-          </button>
           <a
             href={SPREADSHEET_URL}
             target="_blank"
@@ -734,6 +725,15 @@ export default function App() {
           >
             📊 Sheet
           </a>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          >
+            {theme === 'dark' ? '☀ Day' : '🌙 Night'}
+          </button>
           <button className="primary-btn secondary" onClick={() => { setCashEdits({}); setIsCashModalOpen(true); }}>
             💰 Edit Cash
           </button>
