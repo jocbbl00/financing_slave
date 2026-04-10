@@ -74,6 +74,43 @@ function makePieLabel(expanded) {
   };
 }
 
+/** Pie labels for stock holdings: include share count from payload. */
+function makeHoldingsPieLabel(expanded) {
+  return function HoldingsPieLabel({ cx, cy, midAngle, outerRadius, name, percent, index, payload }) {
+    if (percent < 0.01) return null;
+    const qty = payload != null ? Number(payload.qty) : NaN;
+    const qtyStr = Number.isFinite(qty) ? `${qty.toLocaleString()} sh · ` : '';
+    const gap = expanded ? 34 : 24;
+    const dotR = expanded ? 3 : 2;
+    const fontSize = expanded ? '0.82rem' : '0.65rem';
+    const cosA = Math.cos(-midAngle * RADIAN);
+    const sinA = Math.sin(-midAngle * RADIAN);
+    const maxXRadius = Math.max(outerRadius + 8, (cx - 12) / Math.max(Math.abs(cosA), 0.0001));
+    const maxYRadius = Math.max(outerRadius + 8, (cy - 12) / Math.max(Math.abs(sinA), 0.0001));
+    const maxRadius = Math.min(maxXRadius, maxYRadius);
+    const lineEnd = Math.max(outerRadius + 6, Math.min(outerRadius + gap, maxRadius - 8));
+    const labelR = Math.max(lineEnd + 4, Math.min(lineEnd + 8, maxRadius));
+    const sx = cx + outerRadius * cosA;
+    const sy = cy + outerRadius * sinA;
+    const ex = cx + lineEnd * cosA;
+    const ey = cy + lineEnd * sinA;
+    const lx = cx + labelR * cosA;
+    const ly = cy + labelR * sinA;
+    const textAnchor = lx > cx ? 'start' : 'end';
+    const pct = `${(percent * 100).toFixed(0)}%`;
+    return (
+      <g key={`hlabel-${index}`}>
+        <line x1={sx} y1={sy} x2={ex} y2={ey} stroke="var(--text-tertiary)" strokeWidth={expanded ? 1.5 : 1} />
+        <circle cx={ex} cy={ey} r={dotR} fill="var(--text-tertiary)" />
+        <text x={lx + (lx > cx ? 5 : -5)} y={ly} textAnchor={textAnchor} dominantBaseline="central"
+          style={{ fontSize, fill: 'var(--text-secondary)', fontWeight: 600 }}>
+          {qtyStr}{name} {pct}
+        </text>
+      </g>
+    );
+  };
+}
+
 /** Pie stores wedge size in TWD-equivalent; convert to selected display currency. */
 function pieNtdEquivToDisplay(ntdEquiv, currency, fx) {
   const twd = fx.twdPerUsd > 0 ? fx.twdPerUsd : DEFAULT_FX.twdPerUsd;
@@ -525,6 +562,7 @@ export default function App() {
         ticker: a.ticker,
         name: usDisplayLabel(a.ticker, a.displayName),
         value: Number(a.usdValue) || 0,
+        qty: Number(a.qty) || 0,
       }));
 
   const twStocksData = portfolioItems
@@ -533,6 +571,7 @@ export default function App() {
         ticker: a.ticker,
         name: twDisplayLabel(a.ticker, a.displayName),
         value: Number(a.ntdValue) || 0,
+        qty: Number(a.qty) || 0,
       }));
 
   // Cash accounts for the edit modal (loans: Add Loan + sheet sync in backend)
@@ -1075,7 +1114,7 @@ export default function App() {
                             innerRadius={pieRadii(poppedCard === 'us').inner}
                             outerRadius={pieRadii(poppedCard === 'us').outer}
                             paddingAngle={4}
-                            label={makePieLabel(poppedCard === 'us' && !isNarrow)}
+                            label={makeHoldingsPieLabel(poppedCard === 'us' && !isNarrow)}
                             labelLine={false}
                             isAnimationActive={false}
                             activeIndex={-1}
@@ -1094,7 +1133,7 @@ export default function App() {
                         return (
                           <div key={e.ticker} className="pie-legend-item">
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span>{e.name} - ${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)</span>
+                            <span>{e.name} — {e.qty.toLocaleString()} sh · ${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)</span>
                           </div>
                         );
                       })}
@@ -1129,7 +1168,7 @@ export default function App() {
                             innerRadius={pieRadii(poppedCard === 'tw').inner}
                             outerRadius={pieRadii(poppedCard === 'tw').outer}
                             paddingAngle={4}
-                            label={makePieLabel(poppedCard === 'tw' && !isNarrow)}
+                            label={makeHoldingsPieLabel(poppedCard === 'tw' && !isNarrow)}
                             labelLine={false}
                             isAnimationActive={false}
                             activeIndex={-1}
@@ -1148,7 +1187,7 @@ export default function App() {
                         return (
                           <div key={e.ticker} className="pie-legend-item">
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[(index + 4) % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span>{e.name} - NT${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)</span>
+                            <span>{e.name} — {e.qty.toLocaleString()} sh · NT${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)</span>
                           </div>
                         );
                       })}
