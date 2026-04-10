@@ -166,6 +166,51 @@ header p {
   white-space: nowrap;
 }
 
+.loading-screen-title-line {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.08em;
+}
+
+.loading-screen-dots {
+  display: inline-block;
+  min-width: 4ch;
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+.loading-screen-runner {
+  display: inline-block;
+  font-size: 1.05em;
+  line-height: 1;
+  animation: loading-runner-bob 0.5s ease-in-out infinite;
+}
+
+@keyframes loading-runner-bob {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(3px, -5px);
+  }
+  50% {
+    transform: translate(7px, 0);
+  }
+  75% {
+    transform: translate(3px, -5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-screen-runner {
+    animation: none;
+  }
+}
+
 @media (max-width: 480px) {
   .loading-screen-title {
     white-space: normal;

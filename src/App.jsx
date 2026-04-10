@@ -21,6 +21,33 @@ function useViewport() {
   return state;
 }
 
+const LOADING_DOT_PHASES = ['.', '..', '...', '....'];
+
+function LoadingScreen() {
+  const [dotPhase, setDotPhase] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setDotPhase((p) => (p + 1) % LOADING_DOT_PHASES.length);
+    }, 420);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="loading-screen-root">
+      <h2 className="loading-screen-title">
+        <span className="loading-screen-title-line">
+          Your slave is working hard
+          <span className="loading-screen-dots" aria-hidden="true">
+            {LOADING_DOT_PHASES[dotPhase]}
+          </span>
+          <span className="loading-screen-runner" aria-hidden="true" title="Running">
+            🏃‍♂️
+          </span>
+        </span>
+      </h2>
+    </div>
+  );
+}
+
 const API_URL = 'https://script.google.com/macros/s/AKfycbyfNl53aUdseOlPdl-6ffWlZotHqwQmw6tPZJCMO8veRLnUWVaGNasy4jLCNdhkAexf0w/exec';
 
 /** Same workbook as Code.gs `SPREADSHEET_ID_` — open in browser to edit the sheet. */
@@ -702,11 +729,7 @@ export default function App() {
 
 
   if (isLoading) {
-    return (
-      <div className="loading-screen-root">
-        <h2 className="loading-screen-title">Your slave is working hard....</h2>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   return (
