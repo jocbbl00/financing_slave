@@ -832,8 +832,16 @@ export default function App() {
             <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'distribution' ? '✕' : '⤢'}</span>
           </div>
           
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-            <div className="chart-wrap" style={{ width: '100%', minHeight: poppedCard === 'distribution' ? poppedChartHeight : collapsedChartHeight }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'stretch' }}>
+            <div
+              className="chart-wrap"
+              style={{
+                width: '100%',
+                minWidth: 0,
+                height: poppedCard === 'distribution' ? poppedChartHeight : collapsedChartHeight,
+                minHeight: poppedCard === 'distribution' ? poppedChartHeight : collapsedChartHeight,
+              }}
+            >
               <ResponsiveContainer width="100%" height={poppedCard === 'distribution' ? poppedChartHeight : collapsedChartHeight}>
                 <PieChart>
                   <Pie 
@@ -1101,8 +1109,16 @@ export default function App() {
                   <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'us' ? '✕' : '⤢'}</span>
                 </div>
                 {usStocksData.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-                    <div className="chart-wrap" style={{ width: '100%', minHeight: poppedCard === 'us' ? poppedChartHeight : collapsedChartHeight }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'stretch' }}>
+                    <div
+                      className="chart-wrap"
+                      style={{
+                        width: '100%',
+                        minWidth: 0,
+                        height: poppedCard === 'us' ? poppedChartHeight : collapsedChartHeight,
+                        minHeight: poppedCard === 'us' ? poppedChartHeight : collapsedChartHeight,
+                      }}
+                    >
                       <ResponsiveContainer width="100%" height={poppedCard === 'us' ? poppedChartHeight : collapsedChartHeight}>
                         <PieChart>
                           <Pie 
@@ -1155,8 +1171,16 @@ export default function App() {
                   <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'tw' ? '✕' : '⤢'}</span>
                 </div>
                 {twStocksData.length > 0 ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
-                    <div className="chart-wrap" style={{ width: '100%', minHeight: poppedCard === 'tw' ? poppedChartHeight : collapsedChartHeight }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'stretch' }}>
+                    <div
+                      className="chart-wrap"
+                      style={{
+                        width: '100%',
+                        minWidth: 0,
+                        height: poppedCard === 'tw' ? poppedChartHeight : collapsedChartHeight,
+                        minHeight: poppedCard === 'tw' ? poppedChartHeight : collapsedChartHeight,
+                      }}
+                    >
                       <ResponsiveContainer width="100%" height={poppedCard === 'tw' ? poppedChartHeight : collapsedChartHeight}>
                         <PieChart>
                           <Pie 
