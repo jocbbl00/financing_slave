@@ -252,7 +252,7 @@ header p {
   width: 100%;
 }
 
-/* Desktop: day/night + currency left, actions right, all same height. */
+/* Desktop: currency + day/night left, actions right, all same height. */
 @media (min-width: 769px) {
   .header-toolbar {
     --tb-h: 2.75rem;
@@ -271,10 +271,13 @@ header p {
     justify-content: center !important;
   }
 
-  /* Push Sheet / Edit Cash / etc. to the right (after currency group) */
   .header-toolbar > .currency-tabs {
-    margin-right: auto;
     overflow: hidden;
+  }
+
+  /* After currency + day/night, push Sheet / Edit Cash / etc. to the right */
+  .header-toolbar > .theme-toggle {
+    margin-right: auto;
   }
 
   .header-toolbar .currency-tabs__btn {

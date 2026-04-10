@@ -747,15 +747,6 @@ export default function App() {
           </div>
         </div>
         <div className="header-toolbar">
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-          >
-            {theme === 'dark' ? '☀ Day' : '🌙 Night'}
-          </button>
           <div className="currency-tabs" role="group" aria-label="Display currency">
             {['USD', 'NTD', 'JPY'].map((c) => (
               <button
@@ -768,6 +759,15 @@ export default function App() {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          >
+            {theme === 'dark' ? '☀ Day' : '🌙 Night'}
+          </button>
           <a
             href={SPREADSHEET_URL}
             target="_blank"
