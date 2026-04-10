@@ -1162,7 +1162,7 @@ export default function App() {
                         return (
                           <div key={e.ticker} className="pie-legend-item">
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span>{e.name} — {e.qty.toLocaleString()} sh · ${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)</span>
+                            <span>{e.name} {pct}% ({e.qty.toLocaleString()} sh)</span>
                           </div>
                         );
                       })}
@@ -1224,7 +1224,7 @@ export default function App() {
                         return (
                           <div key={e.ticker} className="pie-legend-item">
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[(index + 4) % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span>{e.name} — {e.qty.toLocaleString()} sh · NT${e.value.toLocaleString(undefined, { maximumFractionDigits: 0 })} ({pct}%)</span>
+                            <span>{e.name} {pct}% ({e.qty.toLocaleString()} sh)</span>
                           </div>
                         );
                       })}
