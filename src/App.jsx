@@ -156,6 +156,21 @@ const usDisplayLabel = (ticker, displayName) => {
   return tickerLabel(ticker);
 };
 
+/** Pie legend: company name only (sheet name, else map, else ticker). */
+function pieLegendStockName(ticker, displayName) {
+  const d = displayName && String(displayName).trim();
+  if (d) return d;
+  const mapped = TICKER_NAMES[ticker];
+  if (mapped) return mapped;
+  return String(ticker);
+}
+
+function pieLegendShareSuffix(qty) {
+  const n = Number(qty) || 0;
+  const s = Number.isInteger(n) ? String(n) : String(n.toLocaleString(undefined, { maximumFractionDigits: 4 }));
+  return `${s}sh`;
+}
+
 const DAILY_NEWS_POOL = {
   WIRED: [
     {
@@ -564,6 +579,7 @@ export default function App() {
       .filter(a => a.category === 'USD Stock' && (Number(a.usdValue) || 0) > 0)
       .map(a => ({
         ticker: a.ticker,
+        displayName: a.displayName,
         name: usDisplayLabel(a.ticker, a.displayName),
         value: Number(a.usdValue) || 0,
         qty: Number(a.qty) || 0,
@@ -573,6 +589,7 @@ export default function App() {
       .filter(a => a.category === 'NTD Stock' && (Number(a.ntdValue) || 0) > 0)
       .map(a => ({
         ticker: a.ticker,
+        displayName: a.displayName,
         name: twDisplayLabel(a.ticker, a.displayName),
         value: Number(a.ntdValue) || 0,
         qty: Number(a.qty) || 0,
@@ -1158,11 +1175,13 @@ export default function App() {
                     <div className="pie-legend pie-legend--two-rows">
                       {usStocksData.map((e, index) => {
                         const total = usStocksData.reduce((s, i) => s + i.value, 0);
-                        const pct = total > 0 ? ((e.value / total) * 100).toFixed(1) : '0.0';
+                        const pctNum = total > 0 ? (e.value / total) * 100 : 0;
+                        const pctStr = `${Number(pctNum.toFixed(1))}%`;
+                        const legName = pieLegendStockName(e.ticker, e.displayName);
                         return (
                           <div key={e.ticker} className="pie-legend-item">
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span>{e.name} {pct}% ({e.qty.toLocaleString()} sh)</span>
+                            <span>{legName} · {pctStr} ({pieLegendShareSuffix(e.qty)})</span>
                           </div>
                         );
                       })}
@@ -1220,11 +1239,13 @@ export default function App() {
                     <div className="pie-legend pie-legend--one-column">
                       {twStocksData.map((e, index) => {
                         const total = twStocksData.reduce((s, i) => s + i.value, 0);
-                        const pct = total > 0 ? ((e.value / total) * 100).toFixed(1) : '0.0';
+                        const pctNum = total > 0 ? (e.value / total) * 100 : 0;
+                        const pctStr = `${Number(pctNum.toFixed(1))}%`;
+                        const legName = pieLegendStockName(e.ticker, e.displayName);
                         return (
                           <div key={e.ticker} className="pie-legend-item">
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[(index + 4) % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span>{e.name} {pct}% ({e.qty.toLocaleString()} sh)</span>
+                            <span>{legName} · {pctStr} ({pieLegendShareSuffix(e.qty)})</span>
                           </div>
                         );
                       })}
