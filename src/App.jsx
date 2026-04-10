@@ -23,6 +23,10 @@ function useViewport() {
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbyfNl53aUdseOlPdl-6ffWlZotHqwQmw6tPZJCMO8veRLnUWVaGNasy4jLCNdhkAexf0w/exec';
 
+/** Same workbook as Code.gs `SPREADSHEET_ID_` — open in browser to edit the sheet. */
+const SPREADSHEET_URL =
+  'https://docs.google.com/spreadsheets/d/1CEpGfVGioL5dphTxNxAJD-UyzrMo7HuxtZZBtPOeI_U/edit';
+
 const PIE_COLORS = ['#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#0ea5e9', '#eab308', '#94a3b8'];
 
 const CHART_TOOLTIP_STYLE = {
@@ -721,6 +725,15 @@ export default function App() {
           >
             {theme === 'dark' ? '☀ Day' : '🌙 Night'}
           </button>
+          <a
+            href={SPREADSHEET_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="primary-btn secondary header-sheet-link"
+            title="Open portfolio Google Sheet"
+          >
+            📊 Sheet
+          </a>
           <button className="primary-btn secondary" onClick={() => { setCashEdits({}); setIsCashModalOpen(true); }}>
             💰 Edit Cash
           </button>
