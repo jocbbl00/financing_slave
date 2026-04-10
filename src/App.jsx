@@ -105,12 +105,16 @@ function makePieLabel(expanded) {
   };
 }
 
-/** Pie labels for stock holdings: include share count from payload. */
+/** Pie leader lines (stock holdings): `Apple · 3.8% (14sh)` — name, one-decimal %, shares. */
 function makeHoldingsPieLabel(expanded) {
-  return function HoldingsPieLabel({ cx, cy, midAngle, outerRadius, name, percent, index, payload }) {
+  return function HoldingsPieLabel({ cx, cy, midAngle, outerRadius, percent, index, payload }) {
     if (percent < 0.01) return null;
-    const qty = payload != null ? Number(payload.qty) : NaN;
-    const qtyStr = Number.isFinite(qty) ? `${qty.toLocaleString()} sh · ` : '';
+    const p = payload || {};
+    const legName = pieLegendStockName(p.ticker, p.displayName);
+    const qty = Number(p.qty);
+    const pctStr = `${Number((percent * 100).toFixed(1))}%`;
+    const sharePart = Number.isFinite(qty) ? ` (${pieLegendShareSuffix(qty)})` : '';
+    const labelText = `${legName} · ${pctStr}${sharePart}`;
     const gap = expanded ? 34 : 24;
     const dotR = expanded ? 3 : 2;
     const fontSize = expanded ? '0.82rem' : '0.65rem';
@@ -128,14 +132,13 @@ function makeHoldingsPieLabel(expanded) {
     const lx = cx + labelR * cosA;
     const ly = cy + labelR * sinA;
     const textAnchor = lx > cx ? 'start' : 'end';
-    const pct = `${(percent * 100).toFixed(0)}%`;
     return (
       <g key={`hlabel-${index}`}>
         <line x1={sx} y1={sy} x2={ex} y2={ey} stroke="var(--text-tertiary)" strokeWidth={expanded ? 1.5 : 1} />
         <circle cx={ex} cy={ey} r={dotR} fill="var(--text-tertiary)" />
         <text x={lx + (lx > cx ? 5 : -5)} y={ly} textAnchor={textAnchor} dominantBaseline="central"
           style={{ fontSize, fill: 'var(--text-secondary)', fontWeight: 600 }}>
-          {qtyStr}{name} {pct}
+          {labelText}
         </text>
       </g>
     );
@@ -1204,7 +1207,7 @@ export default function App() {
                         return (
                           <div key={e.ticker} className="pie-legend-item">
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[index % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span>{legName} · {pctStr} ({pieLegendShareSuffix(e.qty)})</span>
+                            <span>{legName} · {e.ticker} · {pctStr} ({pieLegendShareSuffix(e.qty)})</span>
                           </div>
                         );
                       })}
@@ -1268,7 +1271,7 @@ export default function App() {
                         return (
                           <div key={e.ticker} className="pie-legend-item">
                             <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: PIE_COLORS[(index + 4) % PIE_COLORS.length], flexShrink: 0 }}></span>
-                            <span>{legName} · {pctStr} ({pieLegendShareSuffix(e.qty)})</span>
+                            <span>{legName} · {e.ticker} · {pctStr} ({pieLegendShareSuffix(e.qty)})</span>
                           </div>
                         );
                       })}
