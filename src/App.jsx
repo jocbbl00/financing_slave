@@ -71,6 +71,49 @@ const CURRENCY_SYMBOLS = { USD: '$', NTD: 'NT$', JPY: '¥' };
 
 const RADIAN = Math.PI / 180;
 
+const UI_TEXT = {
+  en: {
+    appTitle: "Yarin's Accounting Slave",
+    appSubtitle: 'Real-time Portfolio Tracking & Analytics',
+    languageToggle: '中文',
+    sheet: '📊 Sheet',
+    editCash: '💰 Edit Cash',
+    addLoan: '📉 Add Loan',
+    addStock: 'Add Stock',
+    tabs: { overview: 'Overview', advice: 'Portfolio Advice', holdings: 'Stock Holdings' },
+    investmentSuggestions: '💡 Investment Suggestions',
+    suggestionHint:
+      'Templates personalize with your holdings from the sheet. This is not a live AI feed — refresh after updating the spreadsheet to see numbers and names change.',
+    buyAccumulate: '🛒 Buy / Accumulate',
+    sellTrim: '📉 Sell / Trim',
+  },
+  zh: {
+    appTitle: 'Yarin 財務小助手',
+    appSubtitle: '即時投資組合追蹤與分析',
+    languageToggle: 'ENG',
+    sheet: '📊 試算表',
+    editCash: '💰 編輯現金',
+    addLoan: '📉 新增貸款',
+    addStock: '新增股票',
+    tabs: { overview: '總覽', advice: '投資建議', holdings: '持股明細' },
+    investmentSuggestions: '💡 投資建議',
+    suggestionHint:
+      '建議內容會依你的持股自動帶入。這不是即時 AI 訊號；更新試算表後重新整理可看到最新數字與名稱。',
+    buyAccumulate: '🛒 買進 / 加碼',
+    sellTrim: '📉 賣出 / 減碼',
+  },
+};
+
+function getLocalRotationDayNumber(now = new Date()) {
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const d = now.getDate();
+  let dayNum = Math.floor(Date.UTC(y, m, d) / 86400000);
+  // Rotate to next daily set at 11:59 PM local time.
+  if (now.getHours() === 23 && now.getMinutes() >= 59) dayNum += 1;
+  return dayNum;
+}
+
 function makePieLabel(expanded) {
   return function PieLabel({ cx, cy, midAngle, outerRadius, name, percent, index }) {
     if (percent < 0.01) return null;
@@ -307,7 +350,7 @@ export default function App() {
   const [poppedCard, setPoppedCard] = useState(null);
   const [timeFilter, setTimeFilter] = useState('All');
   const [currency, setCurrency] = useState('USD');
-  const [activeTab, setActiveTab] = useState('Overview');
+  const [activeTab, setActiveTab] = useState('overview');
   const [roiTab, setRoiTab] = useState('US');
   
   const [formData, setFormData] = useState({
@@ -328,6 +371,14 @@ export default function App() {
   const [theme, setTheme] = useState(() =>
     typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
   );
+  const [language, setLanguage] = useState(() => {
+    try {
+      return localStorage.getItem('language') === 'zh' ? 'zh' : 'en';
+    } catch {
+      return 'en';
+    }
+  });
+  const t = UI_TEXT[language];
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     try {
@@ -336,6 +387,13 @@ export default function App() {
       void 0;
     }
   }, [theme]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('language', language);
+    } catch {
+      void 0;
+    }
+  }, [language]);
   const chartTooltipStyle = useMemo(
     () =>
       theme === 'light'
@@ -539,24 +597,44 @@ export default function App() {
   }
 
 
-  // AI-driven investment suggestions (static templates; personalized with your holdings)
-  const generateInvestmentSuggestions = () => {
+  // AI-driven investment suggestions (daily rotation; personalized with your holdings)
+  const generateInvestmentSuggestions = (dayNumber) => {
     const usHoldings = portfolioItems.filter(a => a.category === 'USD Stock');
 
-    const buys = [
-      { ticker: 'NVDA', action: 'BUY', reason: 'AI infrastructure demand continues to accelerate. Your position ($' + Math.round(usHoldings.find(h => h.ticker === 'NVDA')?.usdValue || 0).toLocaleString() + ') is strong but NVDA remains the foundational AI compute play with expanding margins. Consider adding on any dips below $120.' },
-      { ticker: 'GOOGL', action: 'BUY', reason: 'Alphabet is undervalued relative to its AI capabilities (Gemini) and cloud growth. Your ' + (usHoldings.find(h => h.ticker === 'GOOGL')?.qty || 0) + ' shares give you exposure but the P/E ratio suggests room for accumulation.' },
-      { ticker: 'TSMC (2330)', action: 'HOLD', reason: 'Your largest TW position. TSMC dominates advanced chip manufacturing with 90%+ market share in sub-7nm. Geopolitical risk is the main concern — hold but do not add aggressively.' },
+    const buySets = [
+      [
+        { ticker: 'NVDA', action: 'BUY', reason: 'AI infrastructure demand continues to accelerate. Your position ($' + Math.round(usHoldings.find(h => h.ticker === 'NVDA')?.usdValue || 0).toLocaleString() + ') is strong but NVDA remains the foundational AI compute play with expanding margins. Consider adding on any dips below $120.' },
+        { ticker: 'GOOGL', action: 'BUY', reason: 'Alphabet is undervalued relative to its AI capabilities (Gemini) and cloud growth. Your ' + (usHoldings.find(h => h.ticker === 'GOOGL')?.qty || 0) + ' shares give you exposure but the P/E ratio suggests room for accumulation.' },
+        { ticker: 'TSMC (2330)', action: 'HOLD', reason: 'Your largest TW position. TSMC dominates advanced chip manufacturing with 90%+ market share in sub-7nm. Geopolitical risk is the main concern — hold but do not add aggressively.' },
+      ],
+      [
+        { ticker: 'MSFT', action: 'BUY', reason: 'Azure + Copilot monetization continues to support earnings quality. Use pullbacks to add gradually if weighting is still below your core target.' },
+        { ticker: 'AMZN', action: 'BUY', reason: 'AWS AI workloads and ad margin expansion support medium-term upside. A disciplined DCA approach can reduce timing risk.' },
+        { ticker: 'TSMC (2330)', action: 'HOLD', reason: 'Keep as semiconductor core exposure. Maintain position sizing discipline because geopolitics can still create sudden volatility.' },
+      ],
     ];
 
-    const sells = [
-      { ticker: 'PLUG', action: 'TRIM', reason: 'Plug Power continues burning cash with no clear path to profitability. Your 120 shares at ~$' + Math.round(usHoldings.find(h => h.ticker === 'PLUG')?.usdValue || 0).toLocaleString() + ' is a high-risk bet. Consider trimming to 50 shares and reallocating to profitable companies.' },
-      { ticker: 'EVGO', action: 'TRIM', reason: 'EV charging is a tough business with slow returns. Your 50 shares carry high risk. Consider cutting to 20 and rotating into energy infrastructure (VRT, NEE).' },
+    const sellSets = [
+      [
+        { ticker: 'PLUG', action: 'TRIM', reason: 'Plug Power continues burning cash with no clear path to profitability. Your 120 shares at ~$' + Math.round(usHoldings.find(h => h.ticker === 'PLUG')?.usdValue || 0).toLocaleString() + ' is a high-risk bet. Consider trimming to 50 shares and reallocating to profitable companies.' },
+        { ticker: 'EVGO', action: 'TRIM', reason: 'EV charging is a tough business with slow returns. Your 50 shares carry high risk. Consider cutting to 20 and rotating into energy infrastructure (VRT, NEE).' },
+      ],
+      [
+        { ticker: 'PLTR', action: 'TRIM', reason: 'If position weight rises too quickly after momentum runs, trim partial gains and rebalance into lower-volatility core names.' },
+        { ticker: 'High-beta small caps', action: 'TRIM', reason: 'When real yields rise, high-beta speculative names often re-rate first. Reduce exposure if macro conditions tighten.' },
+      ],
     ];
+
+    const buys = buySets[((dayNumber % buySets.length) + buySets.length) % buySets.length];
+    const sells = sellSets[((dayNumber % sellSets.length) + sellSets.length) % sellSets.length];
 
     return { buys, sells };
   };
-  const suggestions = generateInvestmentSuggestions();
+  const suggestionDayNumber = useMemo(() => getLocalRotationDayNumber(new Date(newsTick)), [newsTick]);
+  const suggestions = useMemo(
+    () => generateInvestmentSuggestions(suggestionDayNumber),
+    [suggestionDayNumber, portfolioItems]
+  );
   const rotatingNews = useMemo(
     () => selectDailyNews(getEtRotationDayNumber(new Date(newsTick))),
     [newsTick]
@@ -742,11 +820,20 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <img src="/favicon.jpg" alt="icon" style={{ width: '50px', height: '50px', borderRadius: '12px', objectFit: 'cover', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} />
           <div>
-            <h1>Yarin's Accounting Slave</h1>
-            <p>Real-time Portfolio Tracking & Analytics</p>
+            <h1>{t.appTitle}</h1>
+            <p>{t.appSubtitle}</p>
           </div>
         </div>
         <div className="header-toolbar">
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() => setLanguage((l) => (l === 'en' ? 'zh' : 'en'))}
+            title="Toggle language"
+            aria-label="Toggle language"
+          >
+            {t.languageToggle}
+          </button>
           <div className="currency-tabs" role="group" aria-label="Display currency">
             {['USD', 'NTD', 'JPY'].map((c) => (
               <button
@@ -775,38 +862,42 @@ export default function App() {
             className="primary-btn secondary header-sheet-link"
             title="Open portfolio Google Sheet"
           >
-            📊 Sheet
+            {t.sheet}
           </a>
           <button className="primary-btn secondary" onClick={() => { setCashEdits({}); setIsCashModalOpen(true); }}>
-            💰 Edit Cash
+            {t.editCash}
           </button>
           <button className="primary-btn secondary" onClick={() => setIsLoanModalOpen(true)}>
-            📉 Add Loan
+            {t.addLoan}
           </button>
           <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
             <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add Stock
+            {t.addStock}
           </button>
         </div>
         <div className="main-tabs" role="tablist" aria-label="Main sections">
-          {['Overview', 'Portfolio Advice', 'Stock Holdings'].map((tab) => (
+          {[
+            { key: 'overview', label: t.tabs.overview },
+            { key: 'advice', label: t.tabs.advice },
+            { key: 'holdings', label: t.tabs.holdings },
+          ].map((tab) => (
             <button
-              key={tab}
+              key={tab.key}
               type="button"
               role="tab"
-              aria-selected={activeTab === tab}
-              className={`main-tabs__btn${activeTab === tab ? ' main-tabs__btn--active' : ''}`}
-              onClick={() => setActiveTab(tab)}
+              aria-selected={activeTab === tab.key}
+              className={`main-tabs__btn${activeTab === tab.key ? ' main-tabs__btn--active' : ''}`}
+              onClick={() => setActiveTab(tab.key)}
             >
-              {tab}
+              {tab.label}
             </button>
           ))}
         </div>
       </header>
 
-      {activeTab === 'Overview' && (
+      {activeTab === 'overview' && (
       <>
       <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
         <div className="glass-card stat-card" style={{ borderTop: '4px solid #10b981' }}>
@@ -1060,18 +1151,18 @@ export default function App() {
       </>
       )}
 
-      {activeTab === 'Portfolio Advice' && (
+      {activeTab === 'advice' && (
         <div className="dashboard-grid">
           <div className="glass-card portfolio-advice-card" style={{ gridColumn: '1 / -1' }}>
             <div className="advice-main-head">
-              <h3 className="advice-card-title">💡 Investment Suggestions</h3>
+              <h3 className="advice-card-title">{t.investmentSuggestions}</h3>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.55 }}>
-              Templates personalize with your holdings from the sheet. This is not a live AI feed — refresh after updating the spreadsheet to see numbers and names change.
+              {t.suggestionHint}
             </p>
             <div className="advice-suggestion-columns">
               <div className="advice-suggestion-panel advice-suggestion-panel--buy">
-                <h3 className="advice-suggestion-panel__heading">🛒 Buy / Accumulate</h3>
+                <h3 className="advice-suggestion-panel__heading">{t.buyAccumulate}</h3>
                 {suggestions.buys.map((s, i) => (
                   <div
                     key={i}
@@ -1086,7 +1177,7 @@ export default function App() {
                 ))}
               </div>
               <div className="advice-suggestion-panel advice-suggestion-panel--sell">
-                <h3 className="advice-suggestion-panel__heading">📉 Sell / Trim</h3>
+                <h3 className="advice-suggestion-panel__heading">{t.sellTrim}</h3>
                 {suggestions.sells.map((s, i) => (
                   <div
                     key={i}
@@ -1146,7 +1237,7 @@ export default function App() {
         </div>
       )}
 
-      {activeTab === 'Stock Holdings' && (
+      {activeTab === 'holdings' && (
         <div className="dashboard-grid">
           <div className="holdings-section">
             <h2 style={{ fontWeight: 600, marginBottom: '2rem' }}>📈 Equity Portfolio Breakdown</h2>
