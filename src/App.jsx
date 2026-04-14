@@ -906,7 +906,7 @@ export default function App() {
             {t.editCash}
           </button>
           <button className="primary-btn secondary toolbar-loan-btn" onClick={() => setIsLoanModalOpen(true)}>
-            {isNarrow ? '+ Add Loan' : t.addLoan}
+            {isNarrow ? '📉 + Add Loan' : t.addLoan}
           </button>
           <button className="primary-btn toolbar-add-btn" onClick={() => setIsModalOpen(true)}>
             {!isNarrow && (
@@ -914,7 +914,7 @@ export default function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             )}
-            {isNarrow ? '+ Add Stock' : t.addStock}
+            {isNarrow ? '📈 + Add Stock' : `📈 ${t.addStock}`}
           </button>
         </div>
         <div className="main-tabs" role="tablist" aria-label="Main sections">
