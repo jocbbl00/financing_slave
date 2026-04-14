@@ -917,6 +917,11 @@ a.primary-btn.secondary {
     grid-row: 1;
   }
 
+  .header-toolbar .toolbar-lang-tabs .currency-tabs__btn {
+    flex: 1 1 50%;
+    min-width: 0;
+  }
+
   .header-toolbar .toolbar-currency-tabs {
     grid-column: 5 / 7;
     grid-row: 1;
