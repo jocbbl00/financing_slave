@@ -75,7 +75,8 @@ const UI_TEXT = {
   en: {
     appTitle: "Yarin's Accounting Slave",
     appSubtitle: 'Real-time Portfolio Tracking & Analytics',
-    languageToggle: '中文',
+    languageZh: '中文',
+    languageEn: 'ENG',
     sheet: '📊 Sheet',
     editCash: '💰 Edit Cash',
     addLoan: '📉 Add Loan',
@@ -86,11 +87,27 @@ const UI_TEXT = {
       'Templates personalize with your holdings from the sheet. This is not a live AI feed — refresh after updating the spreadsheet to see numbers and names change.',
     buyAccumulate: '🛒 Buy / Accumulate',
     sellTrim: '📉 Sell / Trim',
+    netEquity: 'Net Equity',
+    totalAssets: 'Total Assets',
+    remainingDebt: 'Remaining Debt',
+    equityHistory: 'Equity History',
+    noHistory: 'No historical data yet. It will appear once portfolio snapshots are recorded.',
+    totalValueDistribution: 'Total Value Distribution',
+    assetAllocation: 'Asset Allocation',
+    roiTracking: '📈 ROI Tracking',
+    noRoiStocks: 'No {market} stocks to track.',
+    aiAdvisorTitle: '🤖 AI portfolio & market advisor',
+    equityPortfolioBreakdown: '📈 Equity Portfolio Breakdown',
+    usStocksTitle: '🇺🇸 US Stocks (USD)',
+    twStocksTitle: '🇹🇼 Taiwan Stocks (NTD)',
+    noUsStocks: 'No US Stocks logged.',
+    noTwStocks: 'No Taiwan Stocks logged.',
   },
   zh: {
     appTitle: 'Yarin 財務小助手',
     appSubtitle: '即時投資組合追蹤與分析',
-    languageToggle: 'ENG',
+    languageZh: '中文',
+    languageEn: 'ENG',
     sheet: '📊 試算表',
     editCash: '💰 編輯現金',
     addLoan: '📉 新增貸款',
@@ -101,6 +118,21 @@ const UI_TEXT = {
       '建議內容會依你的持股自動帶入。這不是即時 AI 訊號；更新試算表後重新整理可看到最新數字與名稱。',
     buyAccumulate: '🛒 買進 / 加碼',
     sellTrim: '📉 賣出 / 減碼',
+    netEquity: '淨資產',
+    totalAssets: '總資產',
+    remainingDebt: '剩餘負債',
+    equityHistory: '資產歷史',
+    noHistory: '目前還沒有歷史資料，記錄後會自動顯示。',
+    totalValueDistribution: '總價值分布',
+    assetAllocation: '資產配置',
+    roiTracking: '📈 報酬率追蹤',
+    noRoiStocks: '目前沒有可追蹤的 {market} 股票。',
+    aiAdvisorTitle: '🤖 AI 投資組合與市場顧問',
+    equityPortfolioBreakdown: '📈 股票持倉拆解',
+    usStocksTitle: '🇺🇸 美股（USD）',
+    twStocksTitle: '🇹🇼 台股（NTD）',
+    noUsStocks: '目前沒有美股持倉。',
+    noTwStocks: '目前沒有台股持倉。',
   },
 };
 
@@ -825,15 +857,21 @@ export default function App() {
           </div>
         </div>
         <div className="header-toolbar">
-          <button
-            type="button"
-            className="theme-toggle"
-            onClick={() => setLanguage((l) => (l === 'en' ? 'zh' : 'en'))}
-            title="Toggle language"
-            aria-label="Toggle language"
-          >
-            {t.languageToggle}
-          </button>
+          <div className="currency-tabs" role="group" aria-label="Language">
+            {[
+              { key: 'zh', label: t.languageZh },
+              { key: 'en', label: t.languageEn },
+            ].map((lang) => (
+              <button
+                key={lang.key}
+                type="button"
+                className={`currency-tabs__btn${language === lang.key ? ' currency-tabs__btn--active' : ''}`}
+                onClick={() => setLanguage(lang.key)}
+              >
+                {lang.label}
+              </button>
+            ))}
+          </div>
           <div className="currency-tabs" role="group" aria-label="Display currency">
             {['USD', 'NTD', 'JPY'].map((c) => (
               <button
@@ -901,24 +939,24 @@ export default function App() {
       <>
       <div className="dashboard-grid" style={{ marginBottom: '2rem' }}>
         <div className="glass-card stat-card" style={{ borderTop: '4px solid #10b981' }}>
-          <div className="stat-label">Net Equity</div>
+          <div className="stat-label">{t.netEquity}</div>
           <div className="stat-value" style={{ color: 'var(--success)' }}>{fmt(historyData.length > 0 ? historyData[historyData.length - 1].net : totalUsdNet)}</div>
         </div>
 
         <div className="glass-card stat-card">
-          <div className="stat-label">Total Assets</div>
+          <div className="stat-label">{t.totalAssets}</div>
           <div className="stat-value">{fmt(historyData.length > 0 ? historyData[historyData.length - 1].gross : totalUsdGross)}</div>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: '0.25rem' }}>= Equity + Debt</div>
         </div>
         
         <div className="glass-card stat-card" style={{ borderTop: '4px solid #ef4444' }}>
-          <div className="stat-label">Remaining Debt</div>
+          <div className="stat-label">{t.remainingDebt}</div>
           <div className="stat-value" style={{ color: '#f87171' }}>{fmt(historyData.length > 0 ? historyData[historyData.length - 1].debt : totalUsdDebt)}</div>
         </div>
 
         <div className={`glass-card insight-card ${poppedCard === 'history' ? 'popped-out' : ''}`} style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
           <div onClick={() => setPoppedCard(p => p === 'history' ? null : 'history')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', cursor: 'pointer' }}>
-            <h2 style={{ fontWeight: 600, margin: 0 }}>Equity History ({currency})</h2>
+            <h2 style={{ fontWeight: 600, margin: 0 }}>{t.equityHistory} ({currency})</h2>
             <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'history' ? '✕' : '⤢'}</span>
           </div>
           
@@ -966,7 +1004,7 @@ export default function App() {
                 </ResponsiveContainer>
              </div>
           ) : (
-            <p style={{ color: 'var(--text-tertiary)' }}>No historical data yet. It will appear once portfolio snapshots are recorded.</p>
+            <p style={{ color: 'var(--text-tertiary)' }}>{t.noHistory}</p>
           )}
           
         </div>
@@ -975,7 +1013,7 @@ export default function App() {
       <div className="dashboard-grid">
         <div className={`glass-card ${poppedCard === 'distribution' ? 'popped-out' : ''}`}>
           <div onClick={() => setPoppedCard(p => p === 'distribution' ? null : 'distribution')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1rem' }}>
-            <h2 style={{ fontWeight: 600, margin: 0 }}>Total Value Distribution</h2>
+            <h2 style={{ fontWeight: 600, margin: 0 }}>{t.totalValueDistribution}</h2>
             <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'distribution' ? '✕' : '⤢'}</span>
           </div>
           
@@ -1031,7 +1069,7 @@ export default function App() {
         {/* Allocation List Card */}
         <div className={`glass-card ${poppedCard === 'allocation' ? 'popped-out' : ''}`}>
           <div onClick={() => setPoppedCard(p => p === 'allocation' ? null : 'allocation')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontWeight: 600, margin: 0 }}>Asset Allocation</h2>
+            <h2 style={{ fontWeight: 600, margin: 0 }}>{t.assetAllocation}</h2>
             <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'allocation' ? '✕' : '⤢'}</span>
           </div>
           
@@ -1065,7 +1103,7 @@ export default function App() {
         {/* ROI Tracking Card */}
         <div className={`glass-card ${poppedCard === 'roi' ? 'popped-out' : ''}`}>
           <div onClick={() => setPoppedCard(p => p === 'roi' ? null : 'roi')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: '1.5rem' }}>
-            <h2 style={{ fontWeight: 600, margin: 0 }}>📈 ROI Tracking</h2>
+            <h2 style={{ fontWeight: 600, margin: 0 }}>{t.roiTracking}</h2>
             <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'roi' ? '✕' : '⤢'}</span>
           </div>
 
@@ -1106,7 +1144,9 @@ export default function App() {
                 const isTarget = i.category === targetCategory || (targetCategory === 'NTD Stock' && i.category === 'NTD Preferred');
                 return isTarget && Number(i.usdValue) !== 0;
              }).length === 0 && (
-                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem', textAlign: 'center', marginTop: '1rem' }}>No {roiTab} stocks to track.</p>
+                <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem', textAlign: 'center', marginTop: '1rem' }}>
+                  {t.noRoiStocks.replace('{market}', roiTab)}
+                </p>
              )}
              {portfolioItems.filter(i => {
                 const targetCategory = roiTab === 'US' ? 'USD Stock' : 'NTD Stock';
@@ -1197,7 +1237,7 @@ export default function App() {
           <div className="glass-card insight-card portfolio-advice-card" style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
             <div className="advice-main-head">
               <h3 className="advice-card-title">
-                🤖 AI portfolio & market advisor
+                {t.aiAdvisorTitle}
               </h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginTop: '1rem' }}>
@@ -1240,7 +1280,7 @@ export default function App() {
       {activeTab === 'holdings' && (
         <div className="dashboard-grid">
           <div className="holdings-section">
-            <h2 style={{ fontWeight: 600, marginBottom: '2rem' }}>📈 Equity Portfolio Breakdown</h2>
+            <h2 style={{ fontWeight: 600, marginBottom: '2rem' }}>{t.equityPortfolioBreakdown}</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem' }}>
               
               <div className={`glass-card ${poppedCard === 'us' ? 'popped-out' : ''}`}>
@@ -1252,7 +1292,7 @@ export default function App() {
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPoppedCard(p => p === 'us' ? null : 'us'); } }}
                 >
-                  <h3 style={{ color: '#3b82f6', margin: 0 }}>🇺🇸 US Stocks (USD) — ${usStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
+                  <h3 style={{ color: '#3b82f6', margin: 0 }}>{t.usStocksTitle} — ${usStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
                   <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'us' ? '✕' : '⤢'}</span>
                 </div>
                 {usStocksData.length > 0 ? (
@@ -1304,7 +1344,7 @@ export default function App() {
                       })}
                     </div>
                   </div>
-                ) : <p style={{ color: 'var(--text-tertiary)' }}>No US Stocks logged.</p>}
+                ) : <p style={{ color: 'var(--text-tertiary)' }}>{t.noUsStocks}</p>}
               </div>
 
               <div className={`glass-card ${poppedCard === 'tw' ? 'popped-out' : ''}`}>
@@ -1316,7 +1356,7 @@ export default function App() {
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPoppedCard(p => p === 'tw' ? null : 'tw'); } }}
                 >
-                  <h3 style={{ color: '#10b981', margin: 0 }}>🇹🇼 Taiwan Stocks (NTD) — NT${twStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
+                  <h3 style={{ color: '#10b981', margin: 0 }}>{t.twStocksTitle} — NT${twStocksData.reduce((s, e) => s + e.value, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
                   <span style={{ fontSize: '1.5rem', color: 'var(--text-tertiary)' }}>{poppedCard === 'tw' ? '✕' : '⤢'}</span>
                 </div>
                 {twStocksData.length > 0 ? (
@@ -1368,7 +1408,7 @@ export default function App() {
                       })}
                     </div>
                   </div>
-                ) : <p style={{ color: 'var(--text-tertiary)' }}>No Taiwan Stocks logged.</p>}
+                ) : <p style={{ color: 'var(--text-tertiary)' }}>{t.noTwStocks}</p>}
               </div>
             </div>
           </div>
