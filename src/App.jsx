@@ -857,7 +857,7 @@ export default function App() {
           </div>
         </div>
         <div className="header-toolbar">
-          <div className="currency-tabs" role="group" aria-label="Language">
+          <div className="currency-tabs toolbar-lang-tabs" role="group" aria-label="Language">
             {[
               { key: 'zh', label: t.languageZh },
               { key: 'en', label: t.languageEn },
@@ -872,7 +872,7 @@ export default function App() {
               </button>
             ))}
           </div>
-          <div className="currency-tabs" role="group" aria-label="Display currency">
+          <div className="currency-tabs toolbar-currency-tabs" role="group" aria-label="Display currency">
             {['USD', 'NTD', 'JPY'].map((c) => (
               <button
                 key={c}
@@ -886,7 +886,7 @@ export default function App() {
           </div>
           <button
             type="button"
-            className="theme-toggle"
+            className="theme-toggle toolbar-theme-toggle"
             onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
             title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             aria-label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
@@ -902,17 +902,19 @@ export default function App() {
           >
             {t.sheet}
           </a>
-          <button className="primary-btn secondary" onClick={() => { setCashEdits({}); setIsCashModalOpen(true); }}>
+          <button className="primary-btn secondary toolbar-editcash-btn" onClick={() => { setCashEdits({}); setIsCashModalOpen(true); }}>
             {t.editCash}
           </button>
-          <button className="primary-btn secondary" onClick={() => setIsLoanModalOpen(true)}>
-            {t.addLoan}
+          <button className="primary-btn secondary toolbar-loan-btn" onClick={() => setIsLoanModalOpen(true)}>
+            {isNarrow ? '+ Loan' : t.addLoan}
           </button>
-          <button className="primary-btn" onClick={() => setIsModalOpen(true)}>
-            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            {t.addStock}
+          <button className="primary-btn toolbar-add-btn" onClick={() => setIsModalOpen(true)}>
+            {!isNarrow && (
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            )}
+            {isNarrow ? '+ Add' : t.addStock}
           </button>
         </div>
         <div className="main-tabs" role="tablist" aria-label="Main sections">
