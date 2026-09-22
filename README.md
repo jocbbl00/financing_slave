@@ -14,3 +14,15 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Advice and news refresh
+
+The browser refreshes news and spreadsheet holdings and rotates the existing
+suggestion templates at 12:00 p.m. America/New_York each day (DST-aware).
+Opening or returning to the app catches up with the current edition. A closed
+browser does not run background jobs. News failures retry after five minutes;
+old hard-coded articles are no longer substituted as current news.
+
+Run scheduling checks with `node --test tests/dailyRefresh.test.js`.
+Build the frontend with `npm run build` and publish `dist` to the site's host to
+activate changes. No hosting deployment configuration is checked into this repo.

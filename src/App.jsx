@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import './index.css';
+import { getEtRotationDayNumber } from './dailyRefresh.js';
 
 function useViewport() {
   const [state, setState] = useState(() => ({
@@ -84,7 +85,7 @@ const UI_TEXT = {
     tabs: { overview: 'Overview', advice: 'Portfolio Advice', holdings: 'Stock Holdings' },
     investmentSuggestions: '💡 Investment Suggestions',
     suggestionHint:
-      'Templates personalize with your holdings from the sheet. This is not a live AI feed — refresh after updating the spreadsheet to see numbers and names change.',
+      'Suggestion templates rotate and news refreshes daily at 12:00 p.m. Eastern Time. Suggestions use your spreadsheet holdings; they are not live AI recommendations.',
     buyAccumulate: '🛒 Buy / Accumulate',
     sellTrim: '📉 Sell / Trim',
     netEquity: 'Net Equity',
@@ -115,7 +116,7 @@ const UI_TEXT = {
     tabs: { overview: '總覽', advice: '投資建議', holdings: '持股明細' },
     investmentSuggestions: '💡 投資建議',
     suggestionHint:
-      '建議內容會依你的持股自動帶入。這不是即時 AI 訊號；更新試算表後重新整理可看到最新數字與名稱。',
+      '建議範本與新聞每天於美東時間中午 12:00 更新（自動配合夏令時間）。建議會帶入試算表持股，並非即時 AI 建議。',
     buyAccumulate: '🛒 買進 / 加碼',
     sellTrim: '📉 賣出 / 減碼',
     netEquity: '淨資產',
@@ -136,15 +137,7 @@ const UI_TEXT = {
   },
 };
 
-function getLocalRotationDayNumber(now = new Date()) {
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const d = now.getDate();
-  let dayNum = Math.floor(Date.UTC(y, m, d) / 86400000);
-  // Rotate to next daily set at 11:59 PM local time.
-  if (now.getHours() === 23 && now.getMinutes() >= 59) dayNum += 1;
-  return dayNum;
-}
+
 
 function makePieLabel(expanded) {
   return function PieLabel({ cx, cy, midAngle, outerRadius, name, percent, index }) {
@@ -276,91 +269,6 @@ function pieLegendShareSuffix(qty) {
   return `${s}sh`;
 }
 
-const DAILY_NEWS_POOL = {
-  WIRED: [
-    {
-      text: 'WIRED · The AI Data Center Boom Is Warping the US Economy',
-      url: 'https://www.wired.com/story/data-center-ai-boom-us-economy-jobs/',
-      summary: 'Tracks how hyperscaler capex and power demand are changing jobs, local grids, and AI infrastructure economics.',
-    },
-    {
-      text: 'WIRED · Arm Is Now Making Its Own Chips',
-      url: 'https://www.wired.com/story/chip-design-firm-arm-is-making-its-own-ai-cpu',
-      summary: 'Covers competitive shifts in AI compute and chip supply that can affect semiconductor valuation assumptions.',
-    },
-    {
-      text: 'WIRED · OpenAI’s AMD Deal Is a Bet on AI Demand',
-      url: 'https://www.wired.com/story/openai-amd-deal-data-center-chips/',
-      summary: 'Highlights demand outlook for data-center GPUs and infrastructure, relevant to broader AI hardware momentum.',
-    },
-  ],
-  WSJ: [
-    {
-      text: 'WSJ · Treasury Yields, Dollar Rise on Fed’s Hawkish Tone',
-      url: 'https://on.wsj.com/48UduHJ',
-      summary: 'Useful read for rate-path risk: bond yields and USD moves directly affect valuation multiples and global risk appetite.',
-    },
-    {
-      text: 'WSJ · Markets Coverage',
-      url: 'https://www.wsj.com/news/markets',
-      summary: 'Daily market pulse for macro drivers (rates, dollar, equities) that feed through to portfolio risk-on/risk-off behavior.',
-    },
-    {
-      text: 'WSJ · Economy Coverage',
-      url: 'https://www.wsj.com/economy',
-      summary: 'Macro and policy updates to track labor, inflation, and growth signals that influence portfolio positioning.',
-    },
-  ],
-  ECONOMIST: [
-    {
-      text: 'The Economist · The Semiconductor Choke-point',
-      url: 'https://www.economist.com/asia/2024/06/13/the-semiconductor-choke-point',
-      summary: 'Explains Taiwan concentration risk and supply-chain geopolitics that can swing both your US chip names and TSMC exposure.',
-    },
-    {
-      text: 'The Economist · TSMC Walks a Geopolitical Tightrope',
-      url: 'https://www.economist.com/business/2024/11/14/tsmc-walks-a-geopolitical-tightrope',
-      summary: 'Focuses on balancing US/China pressures and implications for semiconductor capex and supply resilience.',
-    },
-    {
-      text: 'The Economist · Soldiers of the Silicon Supply Chain Are Worried',
-      url: 'https://www.economist.com/business/2024/05/30/the-soldiers-of-the-silicon-supply-chain-are-worried',
-      summary: 'Details supply-chain fragility and geopolitical scenarios that can reprice semiconductor and Taiwan risk quickly.',
-    },
-  ],
-};
-
-function getEtRotationDayNumber(now = new Date()) {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(now);
-  const pick = (type) => Number(parts.find((p) => p.type === type)?.value || 0);
-  const y = pick('year');
-  const m = pick('month');
-  const d = pick('day');
-  const h = pick('hour');
-  const min = pick('minute');
-  let dayNum = Math.floor(Date.UTC(y, m - 1, d) / 86400000);
-  // Rotate to next daily set at 11:59 PM ET.
-  if (h === 23 && min >= 59) dayNum += 1;
-  return dayNum;
-}
-
-function selectDailyNews(dayNumber) {
-  const pickFrom = (arr, offset) => arr[((dayNumber + offset) % arr.length + arr.length) % arr.length];
-  return [
-    pickFrom(DAILY_NEWS_POOL.WIRED, 0),
-    pickFrom(DAILY_NEWS_POOL.WSJ, 1),
-    pickFrom(DAILY_NEWS_POOL.ECONOMIST, 2),
-  ];
-}
-
 export default function App() {
   const [portfolio, setPortfolio] = useState([]);       // OVERVIEW-level 6-category summary
   const [portfolioItems, setPortfolioItems] = useState([]); // Individual stock/cash/debt rows
@@ -397,6 +305,9 @@ export default function App() {
   const [cashEdits, setCashEdits] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [newsTick, setNewsTick] = useState(() => Date.now());
+  const refreshDay = getEtRotationDayNumber(new Date(newsTick));
+  const [newsRetry, setNewsRetry] = useState(0);
+  const [newsUpdatedAt, setNewsUpdatedAt] = useState(null);
   const [liveNews, setLiveNews] = useState([]);
   const [newsLoading, setNewsLoading] = useState(true);
   const [fxRates, setFxRates] = useState(DEFAULT_FX);
@@ -456,25 +367,41 @@ export default function App() {
 
   useEffect(() => {
     fetchPortfolio();
+  }, [refreshDay]);
+
+  useEffect(() => {
+    let timer;
+    const sync = () => {
+      clearTimeout(timer);
+      setNewsTick(Date.now());
+      timer = setTimeout(sync, 60000 - (Date.now() % 60000));
+    };
+    sync();
+    window.addEventListener('focus', sync);
+    document.addEventListener('visibilitychange', sync);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('focus', sync);
+      document.removeEventListener('visibilitychange', sync);
+    };
   }, []);
 
   useEffect(() => {
-    const id = setInterval(() => setNewsTick(Date.now()), 60000);
-    return () => clearInterval(id);
-  }, []);
-
-  useEffect(() => {
+    let cancelled = false;
+    let retryTimer;
+    let timeout;
+    const controller = new AbortController();
     const FEEDS = [
       { url: 'https://finance.yahoo.com/news/rssindex', source: 'Yahoo Finance' },
       { url: 'https://www.cnbc.com/id/100003114/device/rss/rss.html', source: 'CNBC' },
-      { url: 'https://feeds.reuters.com/reuters/businessNews', source: 'Reuters' },
     ];
     const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
     const cutoff = Date.now() - ONE_WEEK_MS;
 
     const fetchFeed = async ({ url, source }) => {
-      const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}&count=5`;
-      const res = await fetch(api);
+      const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
+      const res = await fetch(api, { cache: 'no-store', signal: controller.signal });
+      if (!res.ok) throw new Error(`News request failed: ${res.status}`);
       const data = await res.json();
       if (data.status !== 'ok') return null;
       const recent = (data.items || []).find(
@@ -489,14 +416,31 @@ export default function App() {
       };
     };
 
-    Promise.allSettled(FEEDS.map(fetchFeed)).then((results) => {
+    const refresh = async () => {
+      if (cancelled) return;
+      setNewsLoading(true);
+      timeout = setTimeout(() => controller.abort(), 20000);
+      const results = await Promise.allSettled(FEEDS.map(fetchFeed));
+      clearTimeout(timeout);
+      if (cancelled) return;
       const articles = results
         .filter((r) => r.status === 'fulfilled' && r.value)
         .map((r) => r.value);
       setLiveNews(articles);
+      setNewsUpdatedAt(articles.length ? Date.now() : null);
       setNewsLoading(false);
-    });
-  }, []);
+      if (!articles.length) {
+        retryTimer = setTimeout(() => setNewsRetry(value => value + 1), 5 * 60000);
+      }
+    };
+    refresh();
+    return () => {
+      cancelled = true;
+      controller.abort();
+      clearTimeout(retryTimer);
+      clearTimeout(timeout);
+    };
+  }, [refreshDay, newsRetry]);
 
   useEffect(() => {
     if (!poppedCard) return;
@@ -629,7 +573,7 @@ export default function App() {
   }
 
 
-  // AI-driven investment suggestions (daily rotation; personalized with your holdings)
+  // Investment suggestion templates (daily noon ET rotation; personalized with holdings)
   const generateInvestmentSuggestions = (dayNumber) => {
     const usHoldings = portfolioItems.filter(a => a.category === 'USD Stock');
 
@@ -662,15 +606,12 @@ export default function App() {
 
     return { buys, sells };
   };
-  const suggestionDayNumber = useMemo(() => getLocalRotationDayNumber(new Date(newsTick)), [newsTick]);
+  const suggestionDayNumber = useMemo(() => getEtRotationDayNumber(new Date(newsTick)), [newsTick]);
   const suggestions = useMemo(
     () => generateInvestmentSuggestions(suggestionDayNumber),
     [suggestionDayNumber, portfolioItems]
   );
-  const rotatingNews = useMemo(
-    () => selectDailyNews(getEtRotationDayNumber(new Date(newsTick))),
-    [newsTick]
-  );
+
 
   const analyzePortfolio = () => {
     const sections = [];
@@ -681,7 +622,7 @@ export default function App() {
       '🏭 Semis & Taiwan — Equipment demand (ASML, AMAT) and TAIEX breadth matter for your US + TW book.',
     ];
 
-    const newsItems = liveNews.length > 0 ? liveNews : rotatingNews;
+    const newsItems = liveNews;
     const marketNewsLinks = [
       {
         text: 'S&P 500 (US broad market)',
@@ -704,7 +645,7 @@ export default function App() {
     });
 
     sections.push({
-      title: newsLoading ? 'News to Keep an Eye On (loading…)' : liveNews.length > 0 ? 'News to Keep an Eye On (past 7 days)' : 'News to Keep an Eye On',
+      title: newsLoading ? 'News to Keep an Eye On (loading…)' : liveNews.length > 0 ? 'News to Keep an Eye On (past 7 days)' : 'News unavailable — retrying automatically',
       icon: '📰',
       color: '#3b82f6',
       links: marketNewsLinks,
@@ -1201,6 +1142,12 @@ export default function App() {
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1.5rem', lineHeight: 1.55 }}>
               {t.suggestionHint}
+              {newsUpdatedAt && <span style={{ display: 'block', marginTop: '0.5rem' }}>
+                {language === 'zh' ? '新聞更新時間：' : 'News refreshed: '}
+                {new Intl.DateTimeFormat(language === 'zh' ? 'zh-TW' : 'en-US', {
+                  timeZone: 'America/New_York', dateStyle: 'medium', timeStyle: 'short',
+                }).format(new Date(newsUpdatedAt))} ET
+              </span>}
             </p>
             <div className="advice-suggestion-columns">
               <div className="advice-suggestion-panel advice-suggestion-panel--buy">
